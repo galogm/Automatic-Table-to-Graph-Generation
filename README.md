@@ -1,4 +1,4 @@
-# AutoG
+# AutoG: Towards automatic graph construction from tabular data
 
 ## Introduction
 
