@@ -57,6 +57,18 @@ Check `scripts/run.sh`.
 
 4. Use AutoG to generate first-round prompt
 
+## Citation
+
+```
+@inproceedings{
+chen2025autog,
+title={AutoG: Towards automatic graph construction from tabular data},
+author={Zhikai Chen and Han Xie and Jian Zhang and Xiang song and Jiliang Tang and Huzefa Rangwala and George Karypis},
+booktitle={The Thirteenth International Conference on Learning Representations},
+year={2025},
+url={https://openreview.net/forum?id=hovDbX4Gh6}
+}
+```
 
 
 
