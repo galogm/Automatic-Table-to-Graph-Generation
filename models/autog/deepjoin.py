@@ -1,6 +1,5 @@
 import sentence_transformers
 import sys
-sys.path.append("/egr/research-dselab/chenzh85/amazon")
 import os
 import nltk
 import numpy as np
@@ -101,7 +100,6 @@ def join_discovery(dataset: DBBRDBDataset, model: sentence_transformers.Sentence
             meta_info[column_values] = (table_name, col_name)
     
     similarity = {}
-    # import ipdb; ipdb.set_trace()
     total_iterations = len(meta_info) * (len(meta_info) - 1) // 2
     with tqdm(total=total_iterations, desc="Processing", unit="iteration") as pbar:
         for i, key in enumerate(meta_info.keys()):
@@ -116,28 +114,13 @@ def join_discovery(dataset: DBBRDBDataset, model: sentence_transformers.Sentence
                     sentence2 = key2
                     embeddings1 = model.encode(sentence1, convert_to_tensor=True)
                     embeddings2 = model.encode(sentence2, convert_to_tensor=True)
-                    # import ipdb; ipdb.set_trace()
                     cosine_score = torch.cosine_similarity(embeddings1, embeddings2, dim=0)
-                    # print(f"Similarity between {sentence1} and {sentence2}: {cosine_score}")
-                    # import ipdb; ipdb.set_trace()
                     similarity[(table_name1, col_name1, table_name2, col_name2)] = cosine_score.item()
                     pbar.update(1)
-    # import ipdb; ipdb.set_trace()
-    # similarity = sorted(similarity.items(), key=lambda x: x[1], reverse=True)
     return similarity
 
 
 
 
-if __name__ == '__main__':
-    rdb_data = load_dbb_dataset_from_cfg_path_no_name(
-        "/egr/research-dselab/chenzh85/amazon/datasets/movielens/raw/metadata.yaml"
-    )
-
-    lm = load_pretrain_jtd_lm(
-        "/egr/research-dselab/chenzh85/amazon/deepjoin/output/deepjoin_webtable_training-all-mpnet-base-v2-2023-10-18_19-54-27"
-    )
-    sim = join_discovery(rdb_data, lm)
-    print(sim)
     
     
