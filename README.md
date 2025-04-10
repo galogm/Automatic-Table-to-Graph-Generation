@@ -10,8 +10,6 @@ AutoG is a novel framework that addresses the critical challenge of automaticall
 
 - Automatic graph schema generation without human intervention
 - LLM-based solution for high-quality graph construction
-- Comprehensive evaluation datasets and benchmarks
-- Compatible with various tabular data formats
 
 ## Installation
 
