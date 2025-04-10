@@ -1,9 +1,7 @@
 import sentence_transformers
-import sys
 import os
 import nltk
 import numpy as np
-from utils.data.rdb import load_dbb_dataset_from_cfg_path_no_name
 from dbinfer import DBBRDBDataset
 import torch
 import pandas as pd
@@ -95,7 +93,6 @@ def join_discovery(dataset: DBBRDBDataset, model: sentence_transformers.Sentence
     for table_name in dataset.tables.keys():
         df = dataset.tables[table_name]
         for col_name in df.keys():
-            col_value = df[col_name]
             column_values = analyze_column_values(df, col_name)
             meta_info[column_values] = (table_name, col_name)
     
@@ -118,9 +115,3 @@ def join_discovery(dataset: DBBRDBDataset, model: sentence_transformers.Sentence
                     similarity[(table_name1, col_name1, table_name2, col_name2)] = cosine_score.item()
                     pbar.update(1)
     return similarity
-
-
-
-
-    
-    

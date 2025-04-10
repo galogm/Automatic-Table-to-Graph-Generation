@@ -507,14 +507,3 @@ def generate_non_dummy_table(dbb, base_table_name, cols, new_table_name):
     dbb.tables[new_table_name] = new_df_dict
     return dbb
     
-    
-if __name__ == '__main__':
-    ## unittest
-    pass 
-    
-    
-
-
-
-
-    

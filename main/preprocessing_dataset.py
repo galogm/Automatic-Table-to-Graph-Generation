@@ -1,11 +1,12 @@
-import typer
 import os
-from ogb.nodeproppred import DglNodePropPredDataset
 import os.path as osp
+import string
+import random
+import datetime
+import yaml
 import numpy as np
 from utils.training import extract_train_val_test_id_from_objects, train_val_test_split
-from dbinfer.task_construct_utils import train_val_test_split_by_temporal, train_val_test_split_npz_file, train_val_test_split_npz_file_defined
-from dbinfer.datetime_utils import ts2dt
+from dbinfer.task_construct_utils import train_val_test_split_by_temporal
 from utils.data.rdb import load_dbb_dataset_from_cfg_path_no_name
 import pandas as pd
 import yaml
@@ -15,6 +16,8 @@ import string
 import random
 import duckdb
 import shutil
+import typer
+from ogb.nodeproppred import DglNodePropPredDataset
 
 def generate_random_string(length):
     # Define the character set (letters and digits)
@@ -40,26 +43,6 @@ def map_keys(original_dict, key_mapping):
         new_dict[new_key] = value
     return new_dict
 
-
-def replace_value(list_dict, key_name, new_value):
-    """
-        list_dict is a list of dictionaries 
-    """
-    index = -1
-    for i, d in enumerate(list_dict):
-        if d['name'] == key_name:
-            index = i
-            break
-    if index != -1:
-        return list_dict
-    else:
-        raise ValueError(f"Key {key_name} not found in the list of dictionaries")
-
-def save_df_to_parquet(df, path):
-    for key, val in df.items():
-        pass 
-
-
 def main(dataset: str = typer.Argument("MAG", help="name of the dataset to be processed")):
     # dataset_path = "datasets"
     dataset_path = "newdatasets"
@@ -68,27 +51,19 @@ def main(dataset: str = typer.Argument("MAG", help="name of the dataset to be pr
         
         original_mag = DglNodePropPredDataset(name="ogbn-mag", root=f"{dataset_path}/mag/raw")         
         ## generate the dataset schema
-        # import ipdb; ipdb.set_trace()
         year_tensor = original_mag[0][0].ndata["year"]['paper'].reshape(-1)
-        dname = "mag"
         full_path = f"{dataset_path}/mag/raw/ogbn_mag"
-        
         original_data = osp.join(full_path, "data", "paper.npz")
         file = np.load(original_data)
         dict_file = dict(file)
         year_np = year_tensor.numpy()
         dict_file['year'] = year_np
-        # import ipdb; ipdb.set_trace()
-
         ## construct the expert schema
         expert_path = f"{dataset_path}/mag/expert"
-
         ## copy the data file from raw path to expert path
         os.makedirs(osp.join(expert_path, "data"), exist_ok=True)
         shutil.copytree(osp.join(full_path, "data"), osp.join(expert_path, "data"), dirs_exist_ok=True)
         shutil.copytree(osp.join(full_path, "cite"), osp.join(expert_path, "cite"), dirs_exist_ok=True)
-        ## year and venue need processing
-        
         expert_yaml = """
 dataset_name: mag
 tables:
@@ -191,27 +166,18 @@ tasks:
   target_column: year
   target_table: Paper
   task_type: classification
-
-
 """
         expert_yaml = yaml.safe_load(expert_yaml)
         with open(f"{expert_path}/metadata.yaml", "w") as f:
             yaml.dump(expert_yaml, f)
-        
         ## save this to both old and expert schema
         expert_path = f"{dataset_path}/mag/expert"
         np.savez(osp.join(expert_path, "data", "paper.npz"), **dict_file)
         ## 5 tables paper, affiliated_with, cites, has_topic, writes
         ## 3 tasks venue, year, paper
-        ## import ipdb; ipdb.set_trace()
-        # original_table = np.load(osp.join(full_path, "data", "paper.npz"))
-        # original_table = dict(original_table)
         original_table = dict_file
-        # import ipdb; ipdb.set_trace()
-        # original_table = pd.DataFrame(original_table)
         extract_train_val_test_id_from_objects(f"{expert_path}/venue", "paperID", original_table)
         extract_train_val_test_id_from_objects(f"{expert_path}/year", "paperID", original_table, stratify=year_np)
-
         ## generate the original schema
         old_path = f"{dataset_path}/mag/old"
         np.savez(osp.join(old_path, "data", "paper.npz"), **dict_file)
@@ -316,7 +282,6 @@ tasks:
     target_column: year
     target_table: Paper
     task_type: classification
-
 """
         with open(f"{old_path}/metadata.yaml", "w") as f:
             yaml.dump(yaml.safe_load(old_yaml), f)
@@ -330,33 +295,20 @@ tasks:
         ## change the arxiv_id to paper in writes
         writes.rename(columns={"paper": "arxiv_id"}, inplace=True)
         writes.to_parquet(osp.join(old_path, "data", "writes.pqt"))
-        
         ## affilited with and cites no change, directly copy to old schema
         affiliated_with = pd.read_parquet(osp.join(expert_path, "data", "affiliated_with.pqt"))
         cites = pd.read_parquet(osp.join(expert_path, "data", "cites.pqt"))
         affiliated_with.to_parquet(osp.join(old_path, "data", "affiliated_with.pqt"))
         cites.to_parquet(osp.join(old_path, "data", "cites.pqt"))
-        
         information = analyze_dataframes({'Table paper': dict_file, 'Table Cites': cites, 'Table HasTopic': has_topic, 'Table AffiliatedWith': affiliated_with, 'Table Writes': writes}, k = 5)
         with open(f"{dataset_path}/mag/information.txt", "w") as f:
             f.write(information)
-
-        
-        
-        
-        
-        
-    
     elif dataset == "IEEE-CIS":
         print("Processing IEEE-CIS dataset")
-        
         transaction_df =  pd.read_csv(f"{dataset_path}/ieeecis/raw/train_transaction.csv")
         identity_df = pd.read_csv(f"{dataset_path}/ieeecis/raw/train_identity.csv")
-        
         meta_info = {}
-        
         ## process original df data
-        
         ## drop transactionDT
         transaction_df['index'] = transaction_df.index
         transaction_df.drop(columns=["TransactionDT"], inplace=True)
@@ -398,7 +350,6 @@ tasks:
         transaction_value["TransactionID"] = transaction_df["TransactionID"].values
         transaction_dict["columns"].append({"name": "isFraud", "dtype": "category"})
         transaction_value["isFraud"] = transaction_df["isFraud"].values
-        
         transaction_dict["columns"].append({"name": "TransactionAmt", "dtype": "float"})
         transaction_value["TransactionAmt"] = transaction_df["TransactionAmt"].values
         transaction_dict["columns"].append({"name": "distance", "dtype": "float"})
@@ -417,7 +368,6 @@ tasks:
         transaction_value["vesta_features"] = vesta_features
         meta_info['tables'].append(transaction_dict)
         np.savez_compressed(f"{dataset_path}/ieeecis/old/data/transaction.npz", **transaction_value)
-        
         identity_dict["name"] = "Identity"
         identity_dict["source"] = "data/identity.npz"
         identity_dict["format"] = "numpy"
@@ -435,7 +385,6 @@ tasks:
         identity_dict["columns"].append({"name": "id_related_features", "dtype": "float"})
         identity_value["id_related_features"] = id_related_features
         meta_info['tables'].append(identity_dict)
-        
         np.savez_compressed(f"{dataset_path}/ieeecis/old/data/identity.npz", **identity_value)        
         meta_info['tasks'] = []
         task_dict = {}
@@ -447,40 +396,28 @@ tasks:
         task_dict['target_table'] = "Transaction"
         task_dict['task_type'] = "classification"
         task_dict['columns'] = transaction_dict["columns"]
-        
         train_splits = {}
         val_splits = {}
         test_splits = {}
-        
         splits_id = np.arange(len(transaction_df))
         train_idx, val_idx, test_idx = train_val_test_split(splits_id, stratify=transaction_df["isFraud"].values, train_size=0.2, val_size=0.1, test_size=0.7)
-        
         for key, val in transaction_value.items():
             train_splits[key] = val[train_idx]
             val_splits[key] = val[val_idx]
             test_splits[key] = val[test_idx]
-        
         np.savez_compressed(f"{dataset_path}/ieeecis/old/fraud/train.npz", **train_splits)
         np.savez_compressed(f"{dataset_path}/ieeecis/old/fraud/validation.npz", **val_splits)
         np.savez_compressed(f"{dataset_path}/ieeecis/old/fraud/test.npz", **test_splits)
-        
         meta_info['tasks'].append(task_dict)
-         
         with open(f"{dataset_path}/ieeecis/old/metadata.yaml", "w") as f:
             yaml.dump(meta_info, f)
-        
-        
-        
         information = analyze_dataframes({'Table Transaction': transaction_value, 'Table Identity': identity_value}, k = 5)
         with open(f"{dataset_path}/ieeecis/information.txt", "w") as f:
             f.write(information)
-        
         print("Processing expert ieeecis dataset")
-
         ## directly copy everything from old to expert
         shutil.copytree(f"{dataset_path}/ieeecis/old/fraud", f"{dataset_path}/ieeecis/expert/fraud", dirs_exist_ok=True)
         shutil.copytree(f"{dataset_path}/ieeecis/old/data", f"{dataset_path}/ieeecis/expert/data", dirs_exist_ok=True)
-
         ## open transaction
         transaction_npz = np.load(f"{dataset_path}/ieeecis/expert/data/transaction.npz", allow_pickle=True)
         transaction_dict = dict(transaction_npz)
@@ -494,9 +431,7 @@ tasks:
         ndata = ndata.merge(df_new, on=['match_1', 'match_2', 'match_3', 'match_4', 'match_5', 'match_6', 'match_7', 'match_8', 'match_9'], how='left')
         data = {k:v for k, v in transaction_dict.items() if k not in ['match_1', 'match_2', 'match_3', 'match_4', 'match_5', 'match_6', 'match_7', 'match_8', 'match_9']}
         data[f'MatchStatusID'] = ndata['MatchStatusID'].values
-
         np.savez_compressed(f"{dataset_path}/ieeecis/expert/data/transaction.npz", **data)
-
         np.savez_compressed(f"{dataset_path}/ieeecis/expert/data/MatchStatus.npz", **new_table)
 
 
@@ -698,80 +633,56 @@ tasks:
   target_table: Transaction
   task_type: classification
   time_column: null
-
 """
         with open(f"{dataset_path}/ieeecis/expert/metadata.yaml", "w") as f:
             f.write(expert_yaml)
-
-
-    
     elif dataset == "mvls":
         print("Processing movielens dataset")   
-        
         movies_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/movies.csv")
         ratings_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/ratings.csv")
         tags_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/tags.csv")
-        
         meta_info = {}
         meta_info['dataset_name'] = "movielens"
         meta_info['tables'] = []
-        
         movies_table = {}
         ratings_table = {}
         tags_table = {}
         genres_table = {}
-        
         movie_values = {}
         ratings_values = {}
         tags_values = {}
-        # genres_values = {}
-        
         movie_values["movieID"] = movies_df["movieId"].values
         movie_values["title"] = movies_df["title"].values
         original_genres = movies_df["genres"].values
         genres = [x.split("|") for x in original_genres]
-        # import ipdb; ipdb.set_trace()
         movie_values["genres"] = genres
         movie_values = pd.DataFrame.from_dict(movie_values)
         new_df = movie_values[['movieID', 'genres']].explode('genres').reset_index(drop=True)
         new_df = new_df.rename(columns={'genres': 'genre'})
-        # import ipdb; ipdb.set_trace()
         new_file_path = f"{dataset_path}/movielens/expert/data/genres.pqt"
-        # new_df = new_df.drop('genres', axis=1)
         new_df.to_parquet(new_file_path)
-        
         movies_table["name"] = "Movies"
         movies_table["source"] = "data/movies.pqt"
         movies_table["format"] = "parquet"
         movies_table["columns"] = []
         movies_table["columns"].append({"name": "movieID", "dtype": "primary_key"})
         movies_table["columns"].append({"name": "title", "dtype": "text"})
-
         genres_table["name"] = "Genres"
         genres_table["source"] = "data/genres.pqt"
         genres_table["format"] = "parquet"
         genres_table["columns"] = []
         genres_table["columns"].append({"name": "movieID", "dtype": "foreign_key", "link_to": "Movies.movieID"})
         genres_table["columns"].append({"name": "genre", "dtype": "foreign_key", "link_to": "Genres.genre"})
-        # movies_table["columns"].append({"name": "genres", "dtype": "multi_category"})
-        
-        # movie_values = pd.DataFrame.from_dict(movie_values)
-       # import ipdb; ipdb.set_trace()
         movie_values = movie_values.drop(columns=["genres"])
         movie_values.to_parquet(f"{dataset_path}/movielens/expert/data/movies.pqt")
-        
-        # ratings_values['ratingID'] = np.arange(len(ratings_df))
         ratings_values["userID"] = ratings_df["userId"].values
         ratings_values["movieID"] = ratings_df["movieId"].values
         ratings_values["rating"] = ratings_df["rating"].values
         timestamp_value = ratings_df["timestamp"].values
-
         ratings_datetime = np.array([datetime.datetime.fromtimestamp(x) for x in timestamp_value])
         ratings_values["timestamp"] = ratings_datetime
         ratings_values = pd.DataFrame.from_dict(ratings_values)
-        
         ratings_values.to_parquet(f"{dataset_path}/movielens/expert/data/ratings.pqt")
-        
         ratings_table["name"] = "Ratings"
         ratings_table["source"] = "data/ratings.pqt"
         ratings_table["format"] = "parquet"
@@ -780,13 +691,10 @@ tasks:
         ratings_table["columns"].append({"name": "movieID", "dtype": "foreign_key", "link_to": "Movies.movieID"})
         ratings_table["columns"].append({"name": "rating", "dtype": "category"})
         ratings_table["columns"].append({"name": "timestamp", "dtype": "datetime"})
-        # ratings_table["columns"].append({"name": "ratingID", "dtype": "primary_key"})
         ratings_table["time_column"] = "timestamp"
-        
         meta_info['tables'].append(movies_table)
         meta_info['tables'].append(ratings_table)
         meta_info['tables'].append(genres_table)
-        
         tags_table["name"] = "Tags"
         tags_table["source"] = "data/tags.pqt"
         tags_table["format"] = "parquet"
@@ -797,7 +705,6 @@ tasks:
         tags_table["columns"].append({"name": "timestamp", "dtype": "datetime"})
         tags_table["time_column"] = "timestamp"
         meta_info['tables'].append(tags_table)
-        
         tags_values["userID"] = tags_df["userId"].values
         tags_values["movieID"] = tags_df["movieId"].values
         tags_values["tag"] = tags_df["tag"].values
@@ -806,7 +713,6 @@ tasks:
         tags_values["timestamp"] = tags_datetime
         tags_values = pd.DataFrame.from_dict(tags_values)
         tags_values.to_parquet(f"{dataset_path}/movielens/expert/data/tags.pqt")
-        
         meta_info['tasks'] = []
         task_dict = {}
         task_dict["name"] = "ratings"
@@ -817,47 +723,31 @@ tasks:
         task_dict['target_table'] = "Ratings"
         task_dict['task_type'] = "classification"
         task_dict['columns'] = ratings_table["columns"]
-        
         meta_info['tasks'].append(task_dict)
-        
-        # ratings_df["timestamp"] = ts2dt(ratings_df["timestamp"].values)
         train_splits, val_splits, test_splits = train_val_test_split_by_temporal(ratings_values, "timestamp", train_ratio=0.6, val_ratio=0.2)
-        
-        # import ipdb; ipdb.set_trace()
         train_splits.to_parquet(f"{dataset_path}/movielens/expert/ratings/train.pqt")
         val_splits.to_parquet(f"{dataset_path}/movielens/expert/ratings/validation.pqt")
         test_splits.to_parquet(f"{dataset_path}/movielens/expert/ratings/test.pqt")
-        
         with open(f"{dataset_path}/movielens/expert/metadata.yaml", "w") as f:
             yaml.dump(meta_info, f)
-        
-        
-        
-
         print("Processing raw movielens dataset")   
-        
         movies_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/movies.csv")
         ratings_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/ratings.csv")
         tags_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/tags.csv")
-        
         meta_info = {}
         meta_info['dataset_name'] = "movielens"
         meta_info['tables'] = []
-        
         movies_table = {}
         ratings_table = {}
         tags_table = {}
-        
         movie_values = {}
         ratings_values = {}
         tags_values = {}
-        
         movie_values["movieID"] = movies_df["movieId"].values
         movie_values["title"] = movies_df["title"].values
         original_genres = movies_df["genres"].values
         genres = [x.split("|") for x in original_genres]
         movie_values["genres"] = genres
-        
         movies_table["name"] = "Movies"
         movies_table["source"] = "data/movies.pqt"
         movies_table["format"] = "parquet"
@@ -865,23 +755,17 @@ tasks:
         movies_table["columns"].append({"name": "movieID", "dtype": "primary_key"})
         movies_table["columns"].append({"name": "title", "dtype": "text"})
         movies_table["columns"].append({"name": "genres", "dtype": "multi_category"})
-        
         movie_values = pd.DataFrame.from_dict(movie_values)
-       # import ipdb; ipdb.set_trace()
         movie_values.to_parquet(f"{dataset_path}/movielens/old/data/movies.pqt")
-        
         ratings_values['ratingID'] = np.arange(len(ratings_df))
         ratings_values["rate_user"] = ratings_df["userId"].values
         ratings_values["rate_movie"] = ratings_df["movieId"].values
         ratings_values["rating"] = ratings_df["rating"].values
         timestamp_value = ratings_df["timestamp"].values
-
         ratings_datetime = np.array([datetime.datetime.fromtimestamp(x) for x in timestamp_value])
         ratings_values["timestamp"] = ratings_datetime
         ratings_values = pd.DataFrame.from_dict(ratings_values)
-        
         ratings_values.to_parquet(f"{dataset_path}/movielens/old/data/ratings.pqt")
-        
         ratings_table["name"] = "Ratings"
         ratings_table["source"] = "data/ratings.pqt"
         ratings_table["format"] = "parquet"
@@ -892,10 +776,8 @@ tasks:
         ratings_table["columns"].append({"name": "timestamp", "dtype": "datetime"})
         ratings_table["columns"].append({"name": "ratingID", "dtype": "primary_key"})
         ratings_table["time_column"] = "timestamp"
-        
         meta_info['tables'].append(movies_table)
         meta_info['tables'].append(ratings_table)
-        
         tags_table["name"] = "Tags"
         tags_table["source"] = "data/tags.pqt"
         tags_table["format"] = "parquet"
@@ -906,7 +788,6 @@ tasks:
         tags_table["columns"].append({"name": "timestamp", "dtype": "datetime"})
         tags_table["time_column"] = "timestamp"
         meta_info['tables'].append(tags_table)
-        
         tags_values["tag_user"] = tags_df["userId"].values
         tags_values["tag_movie"] = tags_df["movieId"].values
         tags_values["tag"] = tags_df["tag"].values
@@ -915,7 +796,6 @@ tasks:
         tags_values["timestamp"] = tags_datetime
         tags_values = pd.DataFrame.from_dict(tags_values)
         tags_values.to_parquet(f"{dataset_path}/movielens/old/data/tags.pqt")
-        
         meta_info['tasks'] = []
         task_dict = {}
         task_dict["name"] = "ratings"
@@ -926,38 +806,25 @@ tasks:
         task_dict['target_table'] = "Ratings"
         task_dict['task_type'] = "classification"
         task_dict['columns'] = ratings_table["columns"]
-        
         meta_info['tasks'].append(task_dict)
-        
-        # ratings_df["timestamp"] = ts2dt(ratings_df["timestamp"].values)
         train_splits, val_splits, test_splits = train_val_test_split_by_temporal(ratings_values, "timestamp", train_ratio=0.6, val_ratio=0.2)
-        
-        # import ipdb; ipdb.set_trace()
         train_splits.to_parquet(f"{dataset_path}/movielens/old/ratings/train.pqt")
         val_splits.to_parquet(f"{dataset_path}/movielens/old/ratings/validation.pqt")
         test_splits.to_parquet(f"{dataset_path}/movielens/old/ratings/test.pqt")
-        
         with open(f"{dataset_path}/movielens/old/metadata.yaml", "w") as f:
             yaml.dump(meta_info, f)
-        
-        
         information = analyze_dataframes({'Table Movie': movie_values, 'Table Ratings': ratings_values, 'Table Tags': tags_values}, k = 5)
         with open(f"{dataset_path}/movielens/information.txt", "w") as f:
             f.write(information) 
             
     elif dataset == "AVS":
-        # history_df = pd.read_parquet("datasets/avs/data/history.pqt")
-
         ## generate the expert schema, what we do is a trick offered in kaggle to 
         ## remove redundant data
-
         transaction_df = pd.read_parquet(f"{dataset_path}/avs/raw/avs/data/transactions.pqt")
         offers_df = pd.read_parquet(f"{dataset_path}/avs/raw/avs/data/offers.pqt")
         offers_unique_cat = offers_df['category'].unique()
         new_transaction_df = transaction_df[transaction_df['category'].isin(offers_unique_cat)]
-
         history_df = pd.read_parquet(f"{dataset_path}/avs/raw/avs/data/history.pqt")
-
         new_transaction_df.to_parquet(f"{dataset_path}/avs/expert/data/transactions.pqt")
         offers_df.to_parquet(f"{dataset_path}/avs/expert/data/offers.pqt")
         history_df.to_parquet(f"{dataset_path}/avs/expert/data/history.pqt")
@@ -965,11 +832,8 @@ tasks:
             old_yaml = yaml.safe_load(f)
         with open(f"{dataset_path}/avs/expert/metadata.yaml", "w") as f:
             yaml.dump(old_yaml, f)
-        
         shutil.copytree(f"{dataset_path}/avs/raw/avs/repeater", f"{dataset_path}/avs/expert/repeater", dirs_exist_ok=True)
-
         ## generate the raw schema, basically remove any potential link leakage
-
         old_yaml = """
 dataset_name: avs
 tables:
@@ -1066,14 +930,10 @@ tasks:
             f.write(old_yaml)
         new_history_df = history_df.rename(columns={'chain': 'history_chain'})
         new_history_df.to_parquet(f"{dataset_path}/avs/old/data/history.pqt")
-
         new_offers_df = offers_df.rename(columns={'category': 'offer_category'})
         new_offers_df.to_parquet(f"{dataset_path}/avs/old/data/offers.pqt")
-
         new_transaction_df = new_transaction_df.rename(columns={'category': 'trans_category', 'chain': 'trans_chain', 'company': 'trans_company'})
-
         new_transaction_df.to_parquet(f"{dataset_path}/avs/old/data/transactions.pqt")
-
         new_train_splits = pd.read_parquet(f"{dataset_path}/avs/expert/repeater/train.pqt")
         new_val_splits = pd.read_parquet(f"{dataset_path}/avs/expert/repeater/validation.pqt")
         new_test_splits = pd.read_parquet(f"{dataset_path}/avs/expert/repeater/test.pqt")
@@ -1083,45 +943,33 @@ tasks:
         new_train_splits.to_parquet(f"{dataset_path}/avs/old/repeater/train.pqt")
         new_val_splits.to_parquet(f"{dataset_path}/avs/old/repeater/validation.pqt")
         new_test_splits.to_parquet(f"{dataset_path}/avs/old/repeater/test.pqt")
-
         information = analyze_dataframes({'Table History': new_history_df, 'Table Offers': new_offers_df, 'Table Transaction': new_transaction_df}, k = 5)
         with open(f"{dataset_path}/avs/information.txt", "w") as f:
             f.write(information) 
         
     elif dataset == "RR":
-
         ## expert directly copy the raw data
         shutil.copytree(f"{dataset_path}/retailrocket/raw/retailrocket", f"{dataset_path}/retailrocket/expert/", dirs_exist_ok=True)
-
         new_view_df = pd.read_parquet(f"{dataset_path}/retailrocket/expert/data/all_views.pqt")
         new_view_df.to_parquet(f"{dataset_path}/retailrocket/old/data/all_views.pqt")
-
         new_category_tree_df = pd.read_parquet(f"{dataset_path}/retailrocket/expert/data/category_tree.pqt")
-        #new_category_tree_df['categoryid'] = new_category_tree_df['categoryid'].astype('int')
-        #new_category_tree_df['parentid'] = new_category_tree_df['parentid'].astype('int')
         new_category_tree_df.to_parquet(f"{dataset_path}/retailrocket/old/data/category_tree.pqt")
-
         new_item_availability_df = pd.read_parquet(f"{dataset_path}/retailrocket/expert/data/item_availability.pqt")
         new_item_availability_df = new_item_availability_df.rename(columns={ 'itemid': 'item_available_itemid'})
-        # new_item_availability_df['available'] = new_item_availability_df['available'].astype(float)
         new_item_availability_df.to_parquet(f"{dataset_path}/retailrocket/old/data/item_availability.pqt")
-
         new_item_category = pd.read_parquet(f"{dataset_path}/retailrocket/expert/data/item_categories.pqt")
         new_item_category['category'] = new_item_category['category'].astype('int')
         new_item_category.to_parquet(f"{dataset_path}/retailrocket/old/data/item_categories.pqt")
-
         new_item_properties = pd.read_parquet(f"{dataset_path}/retailrocket/expert/data/item_properties.pqt")
         new_item_properties = new_item_properties.rename(columns={'itemid': 'item_property_itemid'})
         new_item_properties['property'] = new_item_properties['property'].astype('int')
         new_item_properties.to_parquet(f"{dataset_path}/retailrocket/old/data/item_properties.pqt")
-
         new_cvr_train = pd.read_parquet(f"{dataset_path}/retailrocket/expert/cvr/cvr-100k_train.pqt")
         new_cvr_train.to_parquet(f"{dataset_path}/retailrocket/old/cvr/train.pqt")
         new_cvr_val = pd.read_parquet(f"{dataset_path}/retailrocket/expert/cvr/cvr-100k_validation.pqt")
         new_cvr_val.to_parquet(f"{dataset_path}/retailrocket/old/cvr/validation.pqt")
         new_cvr_test = pd.read_parquet(f"{dataset_path}/retailrocket/expert/cvr/cvr-100k_test.pqt")
         new_cvr_test.to_parquet(f"{dataset_path}/retailrocket/old/cvr/test.pqt")
-
         old_yaml = """
 dataset_name: retailrocket
 tables:
@@ -1203,21 +1051,13 @@ tasks:
   target_table: View
   task_type: classification
   time_column: timestamp
-
-
-
 """
-
         with open(f"{dataset_path}/retailrocket/old/metadata.yaml", "w") as f:
             f.write(old_yaml)
-        
         information = analyze_dataframes({'Table View': new_view_df, 'Table Category': new_category_tree_df, 'Table ItemAvailability': new_item_availability_df, 'Table ItemCategory': new_item_category, 'Table ItemProperty': new_item_properties}, k = 5)
-
         with open(f"{dataset_path}/retailrocket/information.txt", "w") as f:
             f.write(information)
-        
         ## real old, this dataset is special since without introducing this primary key it cannot run
-
         old_yaml = """
 dataset_name: retailrocket
 tables:
@@ -1306,69 +1146,45 @@ tasks:
 """
         new_view_df['cvr_id'] = np.arange(len(new_view_df))
         new_view_df.to_parquet(f"{dataset_path}/retailrocket/realold/data/all_views.pqt")
-
         with open(f"{dataset_path}/retailrocket/realold/metadata.yaml", "w") as f:
             f.write(old_yaml)
-        
         new_category_tree_df.to_parquet(f"{dataset_path}/retailrocket/realold/data/category_tree.pqt")
-
         new_item_availability_df.to_parquet(f"{dataset_path}/retailrocket/realold/data/item_availability.pqt")
-
         new_item_category.to_parquet(f"{dataset_path}/retailrocket/realold/data/item_categories.pqt")
-
         new_item_properties.to_parquet(f"{dataset_path}/retailrocket/realold/data/item_properties.pqt")
-
         cvr_df = new_view_df.sample(n=100000)
         train_splits, val_splits, test_splits = train_val_test_split_by_temporal(cvr_df, "timestamp", train_ratio=0.8, val_ratio=0.1)
-
         train_splits.to_parquet(f"{dataset_path}/retailrocket/realold/cvr/train.pqt")
         val_splits.to_parquet(f"{dataset_path}/retailrocket/realold/cvr/validation.pqt")
         test_splits.to_parquet(f"{dataset_path}/retailrocket/realold/cvr/test.pqt")
 
-      
-        
-    elif dataset == "diginetica":
-        
+    elif dataset == "diginetica":        
         ## copy expert schema directly from raw
-
         if not os.path.exists(f"{dataset_path}/diginetica/expert/metadata.yaml"):
           shutil.copytree(f"{dataset_path}/diginetica/raw/diginetica", f"{dataset_path}/diginetica/expert/", dirs_exist_ok=True)
-
           ## clear unnecessary data 
           os.system(f"rm -rf {dataset_path}/diginetica/expert/data/*_train.pqt")
           os.system(f"rm -rf {dataset_path}/diginetica/expert/data/*_validation.pqt")
           os.system(f"rm -rf {dataset_path}/diginetica/expert/data/*_test.pqt")
           os.system(f"rm -rf {dataset_path}/diginetica/expert/data/*_val.pqt")
-        
         new_query_search_string_tokens = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/query_searchstring_tokens.pqt")
         new_query_search_string_tokens = new_query_search_string_tokens.rename(columns={'token': 'search_token'})
         new_query_search_string_tokens.to_parquet(f"{dataset_path}/diginetica/old/data/query_searchstring_tokens.pqt")
-
         new_query = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/queries.pqt")
         new_query = new_query.rename(columns={'userId': 'query_userId', 'sessionId': 'query_sessionId'})
         new_query.to_parquet(f"{dataset_path}/diginetica/old/data/queries.pqt")
-
         new_click = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/clicks.pqt")
         ## this is a bug in the original diginetica dataset, we need to remove these two items
         new_click.to_parquet(f"{dataset_path}/diginetica/old/data/clicks.pqt")
-
         new_query_result = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/query_results.pqt")
         new_query_result.to_parquet(f"{dataset_path}/diginetica/old/data/query_results.pqt")
-
         new_view = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/item_views.pqt")
         new_view = new_view.rename(columns = {'userId': 'view_user', 'sessionId': 'view_session'})
         new_view.to_parquet(f"{dataset_path}/diginetica/old/data/item_views.pqt")
-
         new_purchase = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/purchases.pqt")
         new_purchase = new_purchase.rename(columns = {'userId': 'purchaser', 'sessionId': 'purchase_session'})
         new_purchase.to_parquet(f"{dataset_path}/diginetica/old/data/purchases.pqt")
-
         new_product = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/products.pqt")
-
-        old_product_name_token = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/product_name_tokens.pqt")
-
-        # import ipdb; ipdb.set_trace()
-
         new_product = duckdb.query("""
             SELECT np.itemId,
                 np.categoryId,
@@ -1379,9 +1195,7 @@ tasks:
             ON np.itemId = opt.itemId
             GROUP BY np.itemId, np.categoryId, np.pricelog2                        
         """)
-
         new_product.to_parquet(f"{dataset_path}/diginetica/old/data/products.pqt")
-
         new_click_train = pd.read_parquet(f"{dataset_path}/diginetica/expert/ctr/ctr-100k_train.pqt")
         new_click_train.to_parquet(f"{dataset_path}/diginetica/old/ctr/ctr-100k_train.pqt")
         new_click_validation = pd.read_parquet(f"{dataset_path}/diginetica/expert/ctr/ctr-100k_validation.pqt")
@@ -1390,7 +1204,6 @@ tasks:
         new_click_test.to_parquet(f"{dataset_path}/diginetica/old/ctr/ctr-100k_test.pqt")
         new_click_val = pd.read_parquet(f"{dataset_path}/diginetica/expert/ctr/ctr-100k_val.pqt")
         new_click_val.to_parquet(f"{dataset_path}/diginetica/old/ctr/ctr-100k_val.pqt")
-
         new_purchase_train = pd.read_parquet(f"{dataset_path}/diginetica/expert/purchase/purchase_train.pqt")
         ## rename like the new_purchase
         new_purchase_train = new_purchase_train.rename(columns={'userId': 'purchaser', 'sessionId': 'purchase_session'})
@@ -1404,7 +1217,6 @@ tasks:
         new_purchase_val = pd.read_parquet(f"{dataset_path}/diginetica/expert/purchase/purchase_val.pqt")
         new_purchase_val = new_purchase_val.rename(columns={'userId': 'purchaser', 'sessionId': 'purchase_session'})
         new_purchase_val.to_parquet(f"{dataset_path}/diginetica/old/purchase/purchase_val.pqt")
-
         old_yaml = """
 dataset_name: diginetica
 tables:
@@ -1538,57 +1350,41 @@ tasks:
   target_table: Purchase
   task_type: retrieval
   time_column: timestamp
-
-
 """
         with open(f"{dataset_path}/diginetica/old/metadata.yaml", "w") as f:
             f.write(old_yaml)
-        
         print("calculateing information")
         information = analyze_dataframes({'Table QueryResult': new_query_result, 'Table Click': new_click, 'Table View': new_view, 'Table Purchase': new_purchase, 'Table QuerySearchstringToken': new_query_search_string_tokens, 'Table Query': new_query, 'Table Product': new_product}, k = 5)
         with open(f"{dataset_path}/diginetica/information.txt", "w") as f:
             f.write(information)
 
-
-                ## product
-    
     elif dataset == 'outbrain':
-        
         ## expert schema, directly copying everything from raw to expert
         shutil.copytree(f"{dataset_path}/outbrain/raw/outbrain-small", f"{dataset_path}/outbrain/expert/", dirs_exist_ok=True)
-
         ## summary_of_data change
         new_event_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/events.pqt")
         new_event_df = new_event_df.rename(columns={'uuid': 'event_uuid'})
         new_event_df.to_parquet(f"{dataset_path}/outbrain/old/data/events.pqt")
-
         new_pageview_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/page_views.pqt")
         new_pageview_df = new_pageview_df.rename(columns={'document_id': 'pv_document_id'})
         new_pageview_df.to_parquet(f"{dataset_path}/outbrain/old/data/page_views.pqt")
-
         new_click_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/clicks.pqt")
         new_click_df = new_click_df.rename(columns={'display_id': 'cl_display_id', 'ad_id': 'cl_ad_id'})
         new_click_df.to_parquet(f"{dataset_path}/outbrain/old/data/clicks.pqt")
-
         new_promoted_content_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/promoted_content.pqt")
         new_promoted_content_df = new_promoted_content_df.rename(columns={'document_id': 'pc_document_id'})
         new_promoted_content_df.to_parquet(f"{dataset_path}/outbrain/old/data/promoted_content.pqt")
-
         new_documents_meta_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/documents_meta.pqt")
         new_documents_meta_df.to_parquet(f"{dataset_path}/outbrain/old/data/documents_meta.pqt")
-
         new_documents_topic_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/documents_topics.pqt")
         new_documents_topic_df = new_documents_topic_df.rename(columns={'document_id': 'dt_document_id'})
         new_documents_topic_df.to_parquet(f"{dataset_path}/outbrain/old/data/documents_topics.pqt")
-
         new_documents_category_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/documents_categories.pqt")
         new_documents_category_df = new_documents_category_df.rename(columns={'document_id': 'dc_document_id'})
         new_documents_category_df.to_parquet(f"{dataset_path}/outbrain/old/data/documents_categories.pqt")
-
         new_documents_entity_df = pd.read_parquet(f"{dataset_path}/outbrain/expert/data/documents_entities.pqt")
         new_documents_entity_df = new_documents_entity_df.rename(columns={'document_id': 'de_document_id'})
         new_documents_entity_df.to_parquet(f"{dataset_path}/outbrain/old/data/documents_entities.pqt")
-
         new_train = pd.read_parquet(f"{dataset_path}/outbrain/expert/ctr/train.pqt")
         new_train = new_train.rename(columns={'display_id': 'cl_display_id', 'ad_id': 'cl_ad_id'})
         new_train.to_parquet(f"{dataset_path}/outbrain/old/ctr/train.pqt")
@@ -1598,8 +1394,6 @@ tasks:
         new_test = pd.read_parquet(f"{dataset_path}/outbrain/expert/ctr/test.pqt")
         new_test = new_test.rename(columns={'display_id': 'cl_display_id', 'ad_id': 'cl_ad_id'})
         new_test.to_parquet(f"{dataset_path}/outbrain/old/ctr/test.pqt")
-        
-
         ## raw schema, removing potential link leakage
         old_yaml = """
 dataset_name: outbrain-small
@@ -1734,22 +1528,15 @@ tasks:
     target_column: clicked
     target_table: Click
     task_type: classification
-
-
 """
         with open(f"{dataset_path}/outbrain/old/metadata.yaml", "w") as f:
             f.write(old_yaml)
-        
         information = analyze_dataframes({'Table Event': new_event_df, 'Table Pageview': new_pageview_df, 'Table Click': new_click_df, 'Table PromotedContent': new_promoted_content_df, 'Table DocumentsMeta': new_documents_meta_df, 'Table DocumentsTopic': new_documents_topic_df, 'Table DocumentsCategory': new_documents_category_df, 'Table DocumentsEntity': new_documents_entity_df}, k = 5)
-
         with open(f"{dataset_path}/outbrain/information.txt", "w") as f:
             f.write(information)
-        
-        
-    
+
     elif dataset == 'stackexchange':
         shutil.copytree(f"{dataset_path}/stackexchange/raw/stackexchange", f"{dataset_path}/stackexchange/expert/", dirs_exist_ok=True)
-
         ## baseline schema
         old_yaml = """
 dataset_name: stackexchange
@@ -1939,9 +1726,7 @@ tasks:
   target_table: Posts
   task_type: classification
   time_column: CreationDate
-
 """
-
         badges_table = pd.read_parquet(f"{dataset_path}/stackexchange/expert/data/badges.pqt")
         users_table = pd.read_parquet(f"{dataset_path}/stackexchange/expert/data/users.pqt")
         postHistory = pd.read_parquet(f"{dataset_path}/stackexchange/expert/data/postHistory.pqt")
@@ -1969,39 +1754,18 @@ tasks:
         postTags = pd.read_parquet(f"{dataset_path}/stackexchange/expert/data/postTags.pqt")
         postTags.to_parquet(f"{dataset_path}/stackexchange/old/data/postTags.pqt")
         users_table.to_parquet(f"{dataset_path}/stackexchange/old/data/users.pqt")
-
         for split in ['train', 'validation', 'test']:
             churn_splits = pd.read_parquet(f"{dataset_path}/stackexchange/expert/churn/target_churn_{split}.pqt")
             upvote_splits = pd.read_parquet(f"{dataset_path}/stackexchange/expert/upvote/target_upvote2_cls_{split}.pqt")
 
             churn_splits.to_parquet(f"{dataset_path}/stackexchange/old/churn/{split}.pqt")
             upvote_splits.to_parquet(f"{dataset_path}/stackexchange/old/upvote/{split}.pqt")
-
         with open(f"{dataset_path}/stackexchange/old/metadata.yaml", "w") as f:
             f.write(old_yaml)
-
         dbb = load_dbb_dataset_from_cfg_path_no_name(f"{dataset_path}/stackexchange/old")
-        
         information = analyze_dataframes({'Table Badges': badges_table, 'Table Users': users_table, 'Table PostHistory': postHistory, 'Table Vote': vote, 'Table Comments': comments, 'Table Posts': posts, 'Table PostLink': postLinks, 'Table Tag': tags, 'Table PostTag': postTags}, k = 5, dbb = dbb)
-
         with open(f"{dataset_path}/stackexchange/information.txt", "w") as f:
             f.write(information)
-
-    
-        
-
-
-
-
-
-             
-        
-        
-        
-        
-        
-    
-
 
 if __name__ == '__main__':
     typer.run(main)

@@ -33,4 +33,3 @@ def cupid_matching(dataset: DBBRDBDataset, matcher_name = 'cupid'):
         matches = valentine_match(table_pair_df, table_pair_df2, matcher, df1_name=table1_name, df2_name=table2_name)
         result.append(matches)
     return result
-

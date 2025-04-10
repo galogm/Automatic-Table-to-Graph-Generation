@@ -6,9 +6,7 @@ from utils.plot import plot_rdb_dataset_schema
 from dbinfer.cli import preprocess
 from dbinfer.cli import construct_graph
 from dbinfer.cli import fit_gml, GMLSolutionChoice
-from dbinfer.task_construct_utils import dataset_stats
 import logging
-import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel('DEBUG')
@@ -65,20 +63,10 @@ def main(dataset: str = typer.Argument(
                 help="Whether to use the cache for the dataset")
          ):
     
-    # import ipdb; ipdb.set_trace()    
     loaded_rdb_dataset, data_id = load_dbb_dataset_from_cfg_path(dataset, schema_path)
     plot_rdb_dataset_schema(loaded_rdb_dataset, f"{cache_path}/{data_id}-schema")
-    
-    if plot_only:
+    if plot_only or stats_only:
         return
-    # import ipdb; ipdb.set_trace()
-    
-    # dataset_stats(loaded_rdb_dataset)
-    if stats_only:
-        return
-    
-    # if skip_process:
-        ## preprocess the datasets
     if use_cache and osp.exists(f"{cache_path}/{data_id}/{data_id}-preprocessed"):
         preprocessed_file_paths = f"{cache_path}/{data_id}/{data_id}-preprocessed"
     else:
@@ -102,11 +90,8 @@ def main(dataset: str = typer.Argument(
     else:
         output_g_path = construct_graph(preprocessed_file_paths, method, f"{cache_path}/{data_id}/{data_id}-{config_file_name}-graph-{method}", None)
         logger.info(f"Graph constructed at {output_g_path}")
-
-    # solution_config_path = osp.join(solution_config_path, data_id, f"{model}-{task_name}.yaml")
     if skip_train:
         return
-    # import ipdb; ipdb.set_trace()
     fit_gml(
         output_g_path, 
         task_name,
@@ -117,11 +102,5 @@ def main(dataset: str = typer.Argument(
         num_of_seeds
     )
     
-    
-    
-    
-    
-     
-
 if __name__ == '__main__':
     typer.run(main)

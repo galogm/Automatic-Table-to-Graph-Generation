@@ -51,8 +51,6 @@ dataset/*
 
 test*
 
-multi-table-benchmark/
-multi-table-benchmark/*
 
 catboost_info/
 catboost_info/*

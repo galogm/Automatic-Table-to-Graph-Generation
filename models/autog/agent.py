@@ -1,6 +1,5 @@
 from models.llm.bedrock import get_bedrock_llm, bedrock_llm_query
 import os
-from models.graph.oracle import GOracle
 from models.autog.action import get_autog_actions, pack_function_introduction_prompt, turn_dbb_into_a_lookup_table
 from prompts.mautog import get_multi_round_action_selection_prompt, get_single_round_multi_step_prompt
 from utils.data.rdb import load_dbb_dataset_from_cfg_path_no_name
@@ -8,7 +7,6 @@ from models.llm.gconstruct import extract_between_tags, analyze_dataframes
 import typer
 import time
 from copy import deepcopy
-import pandas as pd
 from utils.misc import copy_directory
 import shutil
 import ast
@@ -20,7 +18,6 @@ import json
 from copy import deepcopy
 from utils.plot import plot_rdb_dataset_schema
 from dbinfer_bench.dataset_meta import DBBColumnSchema
-
 
 def format_top_k_similarities(dbb, similarity_dict: Dict[Tuple[str, str, str, str], float], k: int) -> str:
     """Formats the top k most similar pairs into a string.
@@ -143,13 +140,6 @@ class AutoG_Agent():
         self.llm_sleep = llm_sleep
         #if self.mode == 'autog-s':
         examples = get_single_round_multi_step_prompt()
-        if self.oracle != None:
-            self.oracle_model = GOracle(
-                self.oracle_strategy,
-                self.oracle, 
-                self.state.dataset_name, self.task_name,
-                'configs'
-            )
         for example in examples:
             self.icl_demonstrations.append(example)
 
@@ -506,13 +496,3 @@ class AutoG_Agent():
             else:
                 dbb = res
                 time.sleep(self.llm_sleep)
-    
-
-         
-        
-    
-    
-    
-    
-
-         

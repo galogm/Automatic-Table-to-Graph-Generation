@@ -1095,6 +1095,3 @@ def graph_check_prompt(schema):
     """  
     
     return GRAPH_CHECK_PROMPT
-
-
-
