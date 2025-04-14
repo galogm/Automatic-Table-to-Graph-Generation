@@ -1,7 +1,7 @@
 # DBInfer Benchmark (DBB)
 
 DBInfer Benchmark (DBB) is a set of benchmarks for measuring machine
-learning solutions over data stored as multiple tables.
+learning solutions over data stored as multiple tables, introduced in the [4DBInfer: A 4D Benchmarking Toolbox for Graph-Centric Predictive Modeling on RDBs](https://proceedings.neurips.cc/paper_files/paper/2024/file/2fd67447702c8eff5683dda507a1b0a2-Paper-Datasets_and_Benchmarks_Track.pdf) paper.
 
 ## Install
 
@@ -56,7 +56,7 @@ See [this tutorial](./notebooks/dataset_guide.ipynb) for a walkthrough of the ab
 ## Running baselines
 
 The repository provides implementations of various baselines including popular
-tabular models w/ or w/o auto-feature-engineering methods and Graph Neural Networks.
+tabular models with or without auto-feature-engineering methods and Graph Neural Networks.
 Since the running them consists of multiple steps such as data preprocessing, featurization,
 graph construction and training, we package them into a python package `dbinfer`
 with each step modularized as a commandline tool.

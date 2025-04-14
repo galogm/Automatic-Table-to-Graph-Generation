@@ -17,7 +17,8 @@ AutoG is a novel framework that addresses the critical challenge of automaticall
 
 ```bash
 git clone https://github.com/amazon-science/Automatic-Table-to-Graph-Generation
-cd AutoG
+
+cd Automatic-Table-to-Graph-Generation/
 ```
 
 ### Step 2: Install Core Dependencies
