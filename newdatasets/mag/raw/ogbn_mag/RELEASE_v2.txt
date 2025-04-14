@@ -1,0 +1,10 @@
+# Release note for ogbn-mag
+
+### v2
+
+June 27, 2020: Removed edge duplicates
+
+### v1
+
+June 10, 2020: Major release.
+
