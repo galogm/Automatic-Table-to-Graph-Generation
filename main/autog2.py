@@ -180,7 +180,7 @@ def main(
 ):
     """Main function to run AutoG agent."""
     seed_everything(seed)
-    typer.echo("Agent version of the Auto-G")
+    logger.info("Agent version of the Auto-G")
 
     # Get LLM configuration
     llm_config = get_llm_config(llm_name)
@@ -234,7 +234,7 @@ def main(
     
     agent.augment()
     augment_history = "\n".join(agent.history)
-    typer.echo(f"Augmentation history: \n{augment_history}")
+    logger.info(f"Augmentation history: \n{augment_history}")
 
 
 if __name__ == '__main__':

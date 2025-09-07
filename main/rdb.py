@@ -75,7 +75,7 @@ def main(dataset: str = typer.Argument(
     config_file_name = schema_path.split("/")[-1].split(".")[0]
     ## construct the graph
     if osp.exists(method):
-        typer.echo("Method is provided in a file.")
+        logger.info("Method is provided in a file.")
         with open(method, "r") as f:
             method = f.read().strip()
             if method == 'Row2Node/Edge':

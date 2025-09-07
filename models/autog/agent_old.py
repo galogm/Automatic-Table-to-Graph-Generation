@@ -18,6 +18,7 @@ import json
 from copy import deepcopy
 from utils.plot import plot_rdb_dataset_schema
 from dbinfer_bench.dataset_meta import DBBColumnSchema
+from utils import logger
 
 def format_top_k_similarities(dbb, similarity_dict: Dict[Tuple[str, str, str, str], float], k: int) -> str:
     """Formats the top k most similar pairs into a string.
@@ -157,19 +158,19 @@ class AutoG_Agent():
             return ""
         # import ipdb; ipdb.set_trace()
         if os.path.exists(os.path.join(self.path_to_file, 'round_0', 'deepjoin.pkl')) and not self.recalculate:
-            typer.echo("Load the deepjoin from cache")
+            logger.info("Load the deepjoin from cache")
             result=joblib.load(os.path.join(self.path_to_file, 'round_0', 'deepjoin.pkl'))
         elif self.recalculate:
-            typer.echo("First try to see the deepjoin state")
+            logger.info("First try to see the deepjoin state")
             if os.path.exists(os.path.join(self.path_to_file, 'round_0', f'deepjoin{self.round}.pkl')):
                 result = joblib.load(os.path.join(self.path_to_file, 'round_0', f'deepjoin{self.round}.pkl'))
             else:
-                typer.echo("Calculate the deepjoin")
+                logger.info("Calculate the deepjoin")
                 model = load_pretrain_jtd_lm(self.lm_path)
                 result = join_discovery(rdb_dataset, model)
                 joblib.dump(result, os.path.join(self.path_to_file, 'round_0', f'deepjoin{self.round}.pkl'))
         else:
-            typer.echo("Calculate the deepjoin")
+            logger.info("Calculate the deepjoin")
             model = load_pretrain_jtd_lm(self.lm_path)
             result = join_discovery(rdb_dataset, model)
             joblib.dump(result, os.path.join(self.path_to_file, 'round_0', 'deepjoin.pkl'))
@@ -304,7 +305,7 @@ class AutoG_Agent():
         selection = json.loads(selection)
         # import ipdb; ipdb.set_trace()
         for move in selection:
-            typer.echo(f"Move: {move}")
+            logger.info(f"Move: {move}")
             last_valid_dbb = deepcopy(this_round_dbb)
             explanation = move['explanation']
             methods = move['action']
@@ -326,7 +327,7 @@ class AutoG_Agent():
                 this_round_dbb = self.update_task(this_round_dbb)
             except Exception as e:
                 ## recover from error
-                typer.echo(f"Error: {e}")
+                logger.info(f"Error: {e}")
                 self.history.append("Error: " + str(e) + "Problem action: " + str(move))   
                 this_round_dbb = last_valid_dbb
                 self.error += 1
@@ -452,7 +453,7 @@ class AutoG_Agent():
             Augment the schema
         """
         for i in range(self.threshold):
-            typer.echo(f"Round: {i}")
+            logger.info(f"Round: {i}")
             ## generate the folder for round i
             self.dataset_cache_path = os.path.join(self.path_to_file, f"round_{i}")
             os.makedirs(self.dataset_cache_path, exist_ok=True)
@@ -482,14 +483,14 @@ class AutoG_Agent():
                 # import ipdb; ipdb.set_trace()
                 res = self.manual_post_process(res)
                 if self.error < 3:
-                    typer.echo("No more action can be taken")
+                    logger.info("No more action can be taken")
                     # import ipdb; ipdb.set_trace()
                     res.save(os.path.join(self.path_to_file, 'final'))
                     ## plot the schema
                     plot_rdb_dataset_schema(res, os.path.join(self.path_to_file, 'final', 'schema'))
                     return
                 elif self.error >= 3:
-                    typer.echo("Too many errors, halt the process")
+                    logger.info("Too many errors, halt the process")
                     res.save(os.path.join(self.path_to_file, 'final'))
                     plot_rdb_dataset_schema(res, os.path.join(self.path_to_file, 'final', 'schema'))
                     return

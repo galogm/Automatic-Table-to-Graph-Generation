@@ -81,7 +81,7 @@ def get_dataset_column_stats(rdb_data: DBBRDBDataset, schema: DBBRDBDatasetMeta)
         ## 10 sampled values
         description = ""
         for table in schema['tables']:
-            typer.echo(f"Table: {table['name']}")
+            logger.info(f"Table: {table['name']}")
             description += f"Table: {table['name']}\n"
             col_json = {}
             for col in table['columns']:

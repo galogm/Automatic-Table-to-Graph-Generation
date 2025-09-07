@@ -3,6 +3,7 @@ import os
 import hashlib
 import sqlite3
 import typer
+from utils import logger
 
 class LLMCache:
     def __init__(self, db_name="llm_cache.db"):
@@ -85,7 +86,7 @@ def bedrock_llm_query(llm, messages, max_tokens = 4096, cache=False, debug = Tru
     else:
         ocache = LLMCache()
         if ocache.get(messages) is not None:
-            typer.echo("Cache hit, return response from the cache")
+            logger.info("Cache hit, return response from the cache")
             return ocache.get(messages)
         else:
             if max_tokens == -1:
