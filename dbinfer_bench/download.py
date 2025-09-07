@@ -21,6 +21,7 @@ import tarfile
 import shutil
 import yaml
 import requests
+from utils import logger
 
 __all__ = [
     "get_builtin_path_or_download",
@@ -67,7 +68,7 @@ def get_builtin_path_or_download(
         if local_ver == version:
             download = False
         else:
-            print(f"Request version is ({version}) but found local version ({local_ver}). Re-downloading...")
+            logger.info(f"Request version is ({version}) but found local version ({local_ver}). Re-downloading...")
             shutil.rmtree(data_dir)
 
     
@@ -105,14 +106,14 @@ def _download_s3(
     if len(objs) == 0:
         raise RuntimeError(f"Dataset {dataset_name} not available.")
     for obj in objs:
-        print(f"Dowloading {obj.key} ...")
+        logger.info(f"Dowloading {obj.key} ...")
         download_path = data_home / tarfilename
         with tqdm(total=obj.size, unit='B', unit_scale=True) as progress:
             def progress_callback(bytes_transferred):
                 progress.update(bytes_transferred)
             bucket.download_file(obj.key, download_path, Callback=progress_callback)
 
-    print(f"Extracting {download_path} ...")
+    logger.info(f"Extracting {download_path} ...")
     with tarfile.open(download_path, 'r:*') as tar:
         tar.extractall(path=data_home)
 
@@ -140,7 +141,7 @@ def _download_default(
                     f.write(chunk)
                     bar.update(len(chunk))
 
-    print(f"Extracting {download_path} ...")
+    logger.info(f"Extracting {download_path} ...")
     with tarfile.open(download_path, 'r:*') as tar:
         tar.extractall(path=data_home)
 

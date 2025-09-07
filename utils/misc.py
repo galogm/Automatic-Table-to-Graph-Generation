@@ -15,6 +15,7 @@ from functools import wraps
 from datetime import datetime
 import time
 from humanfriendly import format_timespan
+from utils import logger
 
 
 
@@ -156,10 +157,10 @@ def count_files_in_directory(directory_path):
         file_count = len([f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))])
         return file_count
     except FileNotFoundError:
-        print(f"Error: Directory not found - '{directory_path}'")
+        logger.info(f"Error: Directory not found - '{directory_path}'")
         return None
     except PermissionError:
-        print(f"Error: Permission denied for directory - '{directory_path}'")
+        logger.info(f"Error: Permission denied for directory - '{directory_path}'")
         return None
     
 
@@ -190,7 +191,7 @@ def get_cur_time(timezone=None, t_format="%m-%d %H:%M:%S"):
 
 
 class timer(ContextDecorator):
-    def __init__(self, name=None, log_func=print):
+    def __init__(self, name=None, log_func=logger.info):
         self.name = name
         self.log_func = log_func
         self.timer = Timer(name=name, logger=None)  # Disable internal logging

@@ -286,7 +286,7 @@ class AutoG_Agent():
         dbb.metadata.tasks[0] = task
         return dbb
 
-    def decide_next_step(self, dbb, epoch):
+    def decide_next_step(self, dbb, llm_path):
         """
             Input the current state, let LLMs determine the next action
         """
@@ -294,11 +294,10 @@ class AutoG_Agent():
         selection = "nothing selected yet"
         # import ipdb; ipdb.set_trace()
         this_round_dbb = dbb
-        os.makedirs(os.path.join(self.path_to_file, f'{self.task_name}_round_{epoch}'), exist_ok=True)
         this_round_prompt = self.pack_prompts(this_round_dbb)
         # response = bedrock_llm_query(self.llm, this_round_prompt, max_tokens = self.output_size, cache=self.use_cache, debug_dataset=self.dataset, debug_task=self.task_name, debug_round=epoch-1)
-        query_file_path = os.path.join(self.path_to_file, f'{self.task_name}_round_{epoch}', 'query.txt') 
-        response_file_path = os.path.join(self.path_to_file, f'{self.task_name}_round_{epoch}', 'response.txt')
+        query_file_path = os.path.join(llm_path, 'query.txt') 
+        response_file_path = os.path.join(llm_path, 'response.txt')
         response = dummy_llm_interaction(this_round_prompt, query_file_path, response_file_path)
         selection = extract_between_tags(response, "selection")[0].strip()
         if selection == "None":
@@ -464,11 +463,15 @@ class AutoG_Agent():
         typer.echo("Start to augment the schema")
         dbb_root_path = self.path_to_file
         dbb = load_dbb_dataset_from_cfg_path_no_name(dbb_root_path)
+        os.makedirs(os.path.join(self.path_to_file, 'final'),exist_ok=True)
+        plot_rdb_dataset_schema(dbb, os.path.join(self.path_to_file, 'final', 'original-schema-1'))
         for i in range(self.threshold):
             typer.echo(f"Round: {i}")
             ## generate the folder for round i
             
-            res, need_continue = self.decide_next_step(dbb, i)
+            llm_path = os.path.join(self.path_to_file, f'{self.task_name}_round_{i}')
+            os.makedirs(llm_path, exist_ok=True)
+            res, need_continue = self.decide_next_step(dbb, llm_path)
             self.round += 1
             if need_continue == False:
                 # import ipdb; ipdb.set_trace()
@@ -476,14 +479,14 @@ class AutoG_Agent():
                 if self.error < 3:
                     typer.echo("No more action can be taken")
                     # import ipdb; ipdb.set_trace()
-                    res.save(os.path.join(self.path_to_file, 'final'))
+                    res.save(os.path.join(llm_path, 'final'))
                     ## plot the schema
-                    plot_rdb_dataset_schema(res, os.path.join(self.path_to_file, 'final', 'schema'))
+                    plot_rdb_dataset_schema(res, os.path.join(llm_path, 'schema-1'))
                     return
                 elif self.error >= 3:
                     typer.echo("Too many errors, halt the process")
-                    res.save(os.path.join(self.path_to_file, 'final'))
-                    plot_rdb_dataset_schema(res, os.path.join(self.path_to_file, 'final', 'schema'))
+                    res.save(os.path.join(llm_path, 'final'))
+                    plot_rdb_dataset_schema(res, os.path.join(llm_path, 'schema-1'))
                     return
             else:
                 dbb = res

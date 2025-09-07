@@ -1,18 +1,23 @@
 ## mag venue
-python3 -m main.autog mag datasets autog-s type.txt venue
+nohup python3 -u -m main.autog mag data autog-s type.txt venue > logs/mag-venue.log 2>&1 &
 
 ## after run this, you probably need to delete the round 0 directory otherwise there will be issues
 
 ## movielens
-python3 -m main.autog movielens datasets autog-s type.txt ratings
+nohup python3 -u -m main.autog movielens data autog-s type.txt ratings > logs/movielens-ratings.log 2>&1 &
 
 ## ieee-cis
-python3 -m main.autog ieee-cis datasets autog-s type.txt fraud
+nohup python3 -u -m main.autog ieeecis data autog-s type.txt fraud > logs/ieee-cis-fraud.log 2>&1 &
+
+nohup python3 -u -m main.autog stackexchange data autog-s type.txt upvote > logs/stackexchange.log 2>&1 &
 
 
+nohup python3 -u -m main.autog outbrain data autog-s type.txt ctr > logs/outbrain.log 2>&1 &
+
+nohup python3 -u -m main.autog retailrocket data autog-s type.txt cvr > logs/retailrocket.log 2>&1 &
 
 ## avs 
-python3 -m main.autog avs datasets autog-s type.txt repeater
+nohup python3 -u -m main.autog avs data autog-s type.txt repeater > logs/avs.log 2>&1 &
 
 ## diginetica
-python3 -m main.autog diginetica datasets autog-s type.txt purchase
+nohup python3 -u -m main.autog diginetica data autog-s type.txt purchase > logs/diginetica.log 2>&1 &

@@ -4,7 +4,7 @@
   available is a more natural setting.
 """
 
-def identify_prompt():
+def identify_prompt(tables, information):
     identify = """
 
 Now you will be given a list of tables and columns, each one with the following format:
@@ -42,7 +42,11 @@ Output the results with the following format:
 
 In description, if you see two columns are very similar and may represent the same thing, you should mention it.
 
-    """
+    Tables:
+    """+f"{tables}"+"""
+
+Table Statistics:
+"""+f"{information}"
 
     return identify
 

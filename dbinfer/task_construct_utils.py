@@ -21,6 +21,8 @@ from torch.utils.data import functional_datapipe
 
 from dgl.graphbolt.minibatch_transformer import MiniBatchTransformer
 
+from utils import logger
+
 def train_val_test_split_by_ratio(df, train_ratio, val_ratio):
     """
     Split a dataframe without shuffling according to train-validation-test ratio
@@ -248,11 +250,11 @@ def dataset_stats(rdb_data):
     total_tables = len(rdb_data.tables.keys())
     for table_name, cols in rdb_data.tables.items():
         one_col = list(cols.keys())[0]
-        print(f"Table {table_name}:")
+        logger.info(f"Table {table_name}:")
         total_rows += len(cols[one_col])
         total_cols += len(list(cols.keys()))
-    print(f"Total tables: {total_tables}")
-    print(f"Total rows: {total_rows}")
-    print(f"Total columns: {total_cols}")
+    logger.info(f"Total tables: {total_tables}")
+    logger.info(f"Total rows: {total_rows}")
+    logger.info(f"Total columns: {total_cols}")
         
         

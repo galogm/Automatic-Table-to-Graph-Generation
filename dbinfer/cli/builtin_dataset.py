@@ -14,9 +14,10 @@
 
 import typer
 import dbinfer_bench as dbb
+from utils import logger
 
 def list_builtin():
-    print('\n'.join(dbb.list_builtin()))
+    logger.info('\n'.join(dbb.list_builtin()))
 
 def download(
     dataset_name : str = typer.Argument(
@@ -29,4 +30,4 @@ def download(
     ),
 ):
     dataset_path = dbb.get_builtin_path_or_download(dataset_name, version)
-    print(f"Dataset downloaded to '{dataset_path}'.")
+    logger.info(f"Dataset downloaded to '{dataset_path}'.")

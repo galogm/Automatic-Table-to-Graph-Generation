@@ -11,6 +11,8 @@ import duckdb
 import numpy as np
 from collections import defaultdict
 import os
+import openai
+from utils import logger
 
 def remove_dummy_table(table_dict):
     new_dict = []
@@ -129,10 +131,10 @@ def get_dataset_column_stats(rdb_data: DBBRDBDataset, schema: DBBRDBDatasetMeta)
 #             content=(code_prompt)
 #         )
 #     ]
-#     print(code_prompt)
+#     logger.info(code_prompt)
 #     res = llm.chat(messages, temperature=0, max_tokens=4096).message.content
 #     code_res = extract_between_tags(res, "code")[0]
-#     print(code_res)
+#     logger.info(code_res)
 #     return code_res, code_prompt
 
 
@@ -167,7 +169,7 @@ def analyze_dataframes(dataframes, k=5, dbb = None):
             for col in table.columns:
                 column_dict[f'Table {table.name}'].append(col.name)
     for df_name, df in dataframe_dict.items():
-        print(f"Analyzing DataFrame: {df_name}")
+        logger.info(f"Analyzing DataFrame: {df_name}")
         output_string += f"Analysis for {df_name}:\n"
         objective = None 
         if isinstance(df, pd.DataFrame):
@@ -181,7 +183,7 @@ def analyze_dataframes(dataframes, k=5, dbb = None):
             if dbb is not None:
                 if col_name not in column_dict[df_name]:
                     continue
-            print(f"Analyzing column: {col_name}")
+            logger.info(f"Analyzing column: {col_name}")
             output_string += f"  Column: {col_name}\n"
             
             if col_name == 'name_tokens':
@@ -251,8 +253,13 @@ def analyze_dataframes(dataframes, k=5, dbb = None):
 
     return output_string 
 
+client = openai.OpenAI(
+    base_url="http://10.130.128.31:8889/v1",
+    api_key="EMPTY"
+)
 
-def dummy_llm_interaction(query_text: str, query_filepath: str = "query.txt", response_filepath: str = "response.txt") -> str:
+
+def dummy_llm_interaction(query_text: str, query_filepath: str = "results/query.txt", response_filepath: str = "results/response.txt") -> str:
     """
     Simulates an interaction with an LLM by saving the query to a file,
     prompting the user to manually get the LLM response and save it to another file,
@@ -267,43 +274,60 @@ def dummy_llm_interaction(query_text: str, query_filepath: str = "query.txt", re
         The content of the response file, presumed to be the LLM's output.
     """
     try:
+
         # 1. Store the query content to a file
         with open(query_filepath, 'w', encoding='utf-8') as q_file:
             q_file.write(query_text)
-        print(f"Query successfully written to: {os.path.abspath(query_filepath)}")
+        logger.info(f"Query successfully written to: {os.path.abspath(query_filepath)}")
 
         # 2. Halt the program and prompt the user
-        print("\n--- ACTION REQUIRED ---")
-        print(f"1. Open the file: {os.path.abspath(query_filepath)}")
-        print(f"2. Copy the query from '{query_filepath}'.")
-        print(f"3. Paste the query into your preferred LLM interface (e.g., in a web browser).")
-        print(f"4. Copy the LLM's complete response.")
-        print(f"5. Paste the response into a new file and save it as: {os.path.abspath(response_filepath)}")
-        print("---")
+        # logger.info("\n--- ACTION REQUIRED ---")
+        # logger.info(f"1. Open the file: {os.path.abspath(query_filepath)}")
+        # logger.info(f"2. Copy the query from '{query_filepath}'.")
+        # logger.info(f"3. Paste the query into your preferred LLM interface (e.g., in a web browser).")
+        # logger.info(f"4. Copy the LLM's complete response.")
+        # logger.info(f"5. Paste the response into a new file and save it as: {os.path.abspath(response_filepath)}")
+        # logger.info("---")
 
         # Loop until the response file is found
+        MODEL_NAME = "Qwen3-30B-A3B-Thinking-2507"
         while not os.path.exists(response_filepath):
-            input(f"Press Enter after you have saved the LLM's response to '{response_filepath}'...")
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {"role": "user", "content": query_text},
+                ],
+            )
+            logger.info(response.to_dict())
+            res_text = response.choices[0].message.content or ''
+
+            with open(response_filepath, 'w', encoding='utf-8') as q_file:
+                q_file.write(res_text)
+                logger.info(f"Response successfully written to: {os.path.abspath(response_filepath)}")
+
+            with open(f"{response_filepath}.json", 'w', encoding='utf-8') as q_file:
+                json.dump(response.to_dict(), q_file, indent=2, ensure_ascii=False)
+
             if not os.path.exists(response_filepath):
-                print(f"File not found: {os.path.abspath(response_filepath)}. Please ensure you have saved the file correctly.")
+                logger.info(f"File not found: {os.path.abspath(response_filepath)}. Please ensure you have saved the file correctly.")
             else:
-                print(f"Response file found: {os.path.abspath(response_filepath)}")
+                logger.info(f"Response file found: {os.path.abspath(response_filepath)}")
                 break # Exit loop once file is found
 
         # 3. Read the content of the response file
         llm_response = ""
         with open(response_filepath, 'r', encoding='utf-8') as r_file:
             llm_response = r_file.read()
-        print(f"\nLLM response successfully read from: {os.path.abspath(response_filepath)}")
+        logger.info(f"\nLLM response successfully read from: {os.path.abspath(response_filepath)}")
 
         return llm_response
 
     except FileNotFoundError:
-        print(f"Error: Could not find one of the files. Please check paths.")
+        logger.info(f"Error: Could not find one of the files. Please check paths.")
         return "Error: File not found during operation."
     except IOError as e:
-        print(f"An I/O error occurred: {e}")
+        logger.info(f"An I/O error occurred: {e}")
         return f"Error: I/O error: {e}"
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.info(f"An unexpected error occurred: {e}")
         return f"Error: Unexpected error: {e}"

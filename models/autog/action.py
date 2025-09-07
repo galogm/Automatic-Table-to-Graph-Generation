@@ -8,6 +8,7 @@ import inspect
 import numpy as np
 import pandas as pd
 from dbinfer_bench.dataset_meta import DBBColumnSchema, DBBTableSchema
+from utils import logger
 
 def apply_simulated_actions(function_name, params):
     actions = SimulatedActions()
@@ -109,7 +110,7 @@ def add_primary_key(dbb, base_table_name, col_name):
         if table.name == base_table_name:
             for column in table.columns:
                 if column.dtype == 'primary_key':
-                    print("Already has a primary key, will not add a new one")
+                    logger.info("Already has a primary key, will not add a new one")
                     return dbb
             table.columns.append(DBBColumnSchema(name=col_name, dtype='primary_key'))
             break
@@ -145,6 +146,7 @@ def generate_or_connect_dummy_table(dbb, base_table_name, orig_col_name, new_tab
         This function can be used in two ways:
         1. Generate a dummy table with only one primary key
         2. Turn an existing column with categorical type to an existing dummy table
+        3. NOTE: Do nothing if column not matched.
         "orig_col_name" must be a column with category type
         Parameters:
         dbb: the database object
@@ -153,6 +155,7 @@ def generate_or_connect_dummy_table(dbb, base_table_name, orig_col_name, new_tab
         new_table_name: the name of the new table to be created/connected
         new_col_name: the name of the new column to be created/connected
     """
+    # NOTE：创建或连接一张列生 dummy table
     tables = dbb.metadata.tables
     for i, table in enumerate(tables):
         if table.name == f'{base_table_name}':
@@ -183,7 +186,7 @@ def number_of_pks(dbb):
 def connect_two_columns_with_non_key_type(dbb, table_1_name, table_1_col_name, table_2_name, table_2_col_name, col_type, **kwargs):
     """
         Description:
-        A helper function to connect two columns with non-key type
+        A helper function to connect two columns with non-key type.
         Parameters:
         dbb: the database object
         table_1_name: the name of the first table
@@ -191,6 +194,7 @@ def connect_two_columns_with_non_key_type(dbb, table_1_name, table_1_col_name, t
         table_2_name: the name of the second table
         table_2_col_name: the name of the column in the second table
     """
+    # NOTE: 合并两表两列为新表并映射
     tables = dbb.metadata.tables
     ## dtype of the two columns
     
@@ -260,6 +264,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
         table_2_name: the name of the second table
         table_2_col_name: the name of the column in the second table, this should be a column with category type
     """
+    # NOTE：映射两表或创建新表并都映射
     tables=dbb.metadata.tables
 
     
@@ -268,12 +273,16 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
     pk = [column for table in tables if table.name == f'{table_2_name}' for column in table.columns if column.dtype == 'primary_key']
     metatype_dict = {f'{table.name}.{column.name}': column.dtype for table in tables for column in table.columns}
     columninfo_dict = {f'{table.name}.{column.name}': column for table in tables for column in table.columns}
+
+
     if f'{table_1_name}.{table_1_col_name}' not in metatype_dict or f'{table_2_name}.{table_2_col_name}' not in metatype_dict:
         # import ipdb; ipdb.set_trace()
+        # NOTE 有问题：若 table_1_name 未匹配，什么也不做；若匹配上，将 table_1_name 外键映射到 table_2_name
         return generate_or_connect_dummy_table(dbb, table_1_name, table_1_col_name, table_2_name, table_2_col_name)
     type_of_col1 = metatype_dict[f'{table_1_name}.{table_1_col_name}']
     type_of_col2 = metatype_dict[f'{table_2_name}.{table_2_col_name}']
-    ## trivial case, both fk and point to the same, directly return
+
+    ## trivial case, both fk and point to the same, 或者 colum 类型不同 directly return
     # import ipdb; ipdb.set_trace()
     if type_of_col1 == 'foreign_key' and type_of_col2 == 'foreign_key' and columninfo_dict[f'{table_1_name}.{table_1_col_name}'].link_to == columninfo_dict[f'{table_2_name}.{table_2_col_name}'].link_to:
         return dbb
@@ -282,6 +291,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
     
     ## two non key types with the same type 
     if type_of_col1 not in ['category', 'primary_key', 'foreign_key'] and type_of_col2 not in ['category', 'primary_key', 'foreign_key']:
+        # NOTE: 非键值类型创建新表并映射
         return connect_two_columns_with_non_key_type(dbb, table_1_name, table_1_col_name, table_2_name, table_2_col_name, col_type=type_of_col1)
 
     # add_fk = False
@@ -306,6 +316,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
         update_fk = False
     ## determine new table and new column name
     if type_of_col1 == 'category' and type_of_col2 == 'category':
+        # NOTE：合并两 column 为新表
         new_table_name = f'{table_1_name}_{table_2_name}'
         new_table_col_name = f'{table_2_col_name}'
     elif type_of_col2 == 'primary_key':
@@ -320,14 +331,18 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
             ## this is a special case
             ## the latter condition is to say that we must ensure there are still primary keys in the table
             ## diginetica has some bugs, the fk and pk doesn't follow strict constraints, here is a work around to not update the pk to fk.
+            # NOTE：数据不满射，合并两 column 为新表
             new_table_name = f'{table_1_name}_{table_2_name}'
             new_table_col_name = f'{table_2_col_name}'
         else:
+            # NOTE：不需要开新表
             new_table_name = ""
             new_table_col_name = ""
     else:
+        # NOTE：不开新表
         new_table_name = ""
         new_table_col_name = ""
+
     old_link_to = ""
     new_link_to = ""
     direct_connect = False
@@ -341,6 +356,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
                     # if column.dtype != 'category': raise ValueError("The column must be a category type")
                     table.columns[j].dtype = 'foreign_key'
                     if new_table_name != "":
+                        # NOTE: 更新 table_1 外键映射 新 table 主键
                         table.columns[j].link_to = f'{new_table_name}.{new_table_col_name}'
                         new_link_to = f'{new_table_name}.{new_table_col_name}'
                     else:
@@ -348,21 +364,24 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
                         ## 1. update the fk key
                         ## 2. connect column 1 to column 2 (cat to fk, cat to pk)
                         if update_fk:
+                            # NOTE: 更新 table_1 外键映射 table_2 主键
                             old_link_to = column.link_to
                         else:
+                            # NOTE: 添加 table_1 外键映射 table_2 外键映射的主键
                             if type_of_col2 == 'primary_key':
                                 table.columns[j].link_to = f'{table_2_name}.{table_2_col_name}'
-                                if not update_fk:
-                                    direct_connect = True
+                                direct_connect = True
                             elif type_of_col2 == 'foreign_key':
                                 save_table_i = i
                                 save_column_j = j
                             # new_link_to = f'{table_2_name}.{table_2_col_name}'
                     break
             tables[i] = table
+
     if direct_connect:
         dbb.metadata.tables = tables
         return dbb
+    
     for i, table in enumerate(tables):
         if table.name == f'{table_2_name}':
             add_pk = False
@@ -371,17 +390,21 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
                     # if column.dtype != 'category' and new_table_name != '': raise ValueError("The column must be a category type")
                     if column.dtype == 'category' and new_table_name == '': raise ValueError("In this case you must provide a new table name")
                     if new_table_name != '':
+                        # NOTE: 创建 table_2 外键映射 新 table 主键
                         table.columns[j].dtype = 'foreign_key'
                         table.columns[j].link_to = f'{new_table_name}.{new_table_col_name}'
                     
                     if save_column_j >= 0:
+                        # NOTE: 创建 table_1 外键映射 table_2 外键映射的主键
                         ## must be foreign key
                         tables[save_table_i].columns[save_column_j].link_to = column.link_to
 
                     if update_fk:
                         if column.dtype == 'primary_key':
+                            # NOTE: 更新 table_1 外键映射 table_2 主键
                             new_link_to = f'{table_2_name}.{table_2_col_name}'
                         else:
+                            # NOTE: 更新 table_1 外键映射 table_2 外键映射的主键
                             new_link_to = column.link_to
                     # elif column.dtype != 'category' and column.dtype != 'foreign_key' and column.dtype != 'primary_key' and new_table_name == '':
                     #     ## Surrogate Key
@@ -404,6 +427,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
         for i, table in enumerate(tables):
             for j, column in enumerate(table.columns):
                 if column.dtype == 'foreign_key' and column.link_to == old_link_to:
+                    # NOTE: 更新 table_1 外键映射 table_2 主键或外键映射的主键
                     table.columns[j].link_to = new_link_to
         dbb.metadata.tables = tables
         return dbb
@@ -441,8 +465,9 @@ def explode_multi_category_column(dbb, original_table, multi_cat_col, primary_ke
         primary_key_column: the name of the primary key column in the original table
         new_table_name: the name of the new table to be created
         new_col_name: the name of the new column to be created
-        dtype: the data type of the new column, if set to "foreign_key", this table will contain only "foreign_keys". In this case, it means you only want to use this column's relaion. If set to other types, this table will contain the original column's values, and a primary key will be added, this means you want to use this column's values.
+        dtype: the data type of the new column, if set to "foreign_key", this table will contain only "foreign_keys". In this case, it means you only want to use this column's relation. If set to other types, this table will contain the original column's values, and a primary key will be added, this means you want to use this column's values.
     """
+    # NOTE：将多类别列扩展为新表中的多列并映射
     data = dbb.tables[original_table]
     tables = dbb.metadata.tables
     columninfo_dict = {f'{table.name}.{column.name}': column for table in tables for column in table.columns}
@@ -452,15 +477,17 @@ def explode_multi_category_column(dbb, original_table, multi_cat_col, primary_ke
         if columninfo_dict[f'{original_table}.{primary_key_column}'].dtype == 'foreign_key':
             primary_key_table, primary_key_column = columninfo_dict[f'{original_table}.{primary_key_column}'].link_to.split('.')
         else:
-            print("Not valid explode parameters, quit")
+            logger.info("Not valid explode parameters, quit")
             return dbb
     else:
         primary_key_table = original_table
+
     rel_cols = {k:v for k, v in data.items() if k in [f'{primary_key_column}', f'{multi_cat_col}']}
     df = pd.DataFrame(rel_cols)
     if df[f'{multi_cat_col}'].dtype != 'object':
-        print(f"Warning: The column {multi_cat_col} is not of type object, will halt")
+        logger.info(f"Warning: The column {multi_cat_col} is not of type object, will halt")
         return dbb
+    
     if dtype != "foreign_key":
         tables = dbb.metadata.tables
         del_col_idx = 0
@@ -533,6 +560,7 @@ def generate_non_dummy_table(dbb, base_table_name, cols, new_table_name, **kwarg
         cols: the list of columns to be included in the new table and removed from the original table
         new_table_name: the name of the new table to be created
     """
+    # NOTE：独立若干列为新表
     tables = dbb.metadata.tables
     del_idx = []
     col_info = []

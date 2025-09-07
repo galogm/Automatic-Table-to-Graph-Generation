@@ -18,6 +18,7 @@ import duckdb
 import shutil
 import typer
 from ogb.nodeproppred import DglNodePropPredDataset
+from utils import logger
 
 def generate_random_string(length):
     # Define the character set (letters and digits)
@@ -45,11 +46,11 @@ def map_keys(original_dict, key_mapping):
 
 
 def main(dataset: str = typer.Argument("MAG", help="name of the dataset to be processed"), 
-         dataset_path: str = typer.Argument("/home/ubuntu/data/relbench", help="path to the dataset")):
+         dataset_path: str = typer.Argument("data", help="path to the dataset")):
     # dataset_path = "datasets"
     # dataset_path = "newdatasets"
     if dataset == "MAG":
-        print("Processing MAG dataset")
+        logger.info("Processing MAG dataset")
         
         original_mag = DglNodePropPredDataset(name="ogbn-mag", root=f"{dataset_path}/mag/raw")         
         ## generate the dataset schema
@@ -306,7 +307,7 @@ tasks:
         with open(f"{dataset_path}/mag/information.txt", "w") as f:
             f.write(information)
     elif dataset == "IEEE-CIS":
-        print("Processing IEEE-CIS dataset")
+        logger.info("Processing IEEE-CIS dataset")
         transaction_df =  pd.read_csv(f"{dataset_path}/ieeecis/raw/train_transaction.csv")
         identity_df = pd.read_csv(f"{dataset_path}/ieeecis/raw/train_identity.csv")
         meta_info = {}
@@ -416,7 +417,7 @@ tasks:
         information = analyze_dataframes({'Table Transaction': transaction_value, 'Table Identity': identity_value}, k = 5)
         with open(f"{dataset_path}/ieeecis/information.txt", "w") as f:
             f.write(information)
-        print("Processing expert ieeecis dataset")
+        logger.info("Processing expert ieeecis dataset")
         ## directly copy everything from old to expert
         shutil.copytree(f"{dataset_path}/ieeecis/old/fraud", f"{dataset_path}/ieeecis/expert/fraud", dirs_exist_ok=True)
         shutil.copytree(f"{dataset_path}/ieeecis/old/data", f"{dataset_path}/ieeecis/expert/data", dirs_exist_ok=True)
@@ -639,7 +640,7 @@ tasks:
         with open(f"{dataset_path}/ieeecis/expert/metadata.yaml", "w") as f:
             f.write(expert_yaml)
     elif dataset == "mvls":
-        print("Processing movielens dataset")   
+        logger.info("Processing movielens dataset")   
         movies_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/movies.csv")
         ratings_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/ratings.csv")
         tags_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/tags.csv")
@@ -732,7 +733,7 @@ tasks:
         test_splits.to_parquet(f"{dataset_path}/movielens/expert/ratings/test.pqt")
         with open(f"{dataset_path}/movielens/expert/metadata.yaml", "w") as f:
             yaml.dump(meta_info, f)
-        print("Processing raw movielens dataset")   
+        logger.info("Processing raw movielens dataset")   
         movies_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/movies.csv")
         ratings_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/ratings.csv")
         tags_df = pd.read_csv(f"{dataset_path}/movielens/raw/ml-latest-small/tags.csv")
@@ -819,7 +820,7 @@ tasks:
         with open(f"{dataset_path}/movielens/information.txt", "w") as f:
             f.write(information) 
             
-    elif dataset == "AVS":
+    elif dataset == "avs":
         ## generate the expert schema, what we do is a trick offered in kaggle to 
         ## remove redundant data
         transaction_df = pd.read_parquet(f"{dataset_path}/avs/raw/avs/data/transactions.pqt")
@@ -1186,7 +1187,22 @@ tasks:
         new_purchase = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/purchases.pqt")
         new_purchase = new_purchase.rename(columns = {'userId': 'purchaser', 'sessionId': 'purchase_session'})
         new_purchase.to_parquet(f"{dataset_path}/diginetica/old/data/purchases.pqt")
+
+        old_product_name_token = pd.read_parquet(f"{dataset_path}/diginetica/raw/diginetica/data/product_name_tokens.pqt")
+        old_product_name_token.to_parquet(f"{dataset_path}/diginetica/old/data/old_product_name_token.pqt")
+        
+
         new_product = pd.read_parquet(f"{dataset_path}/diginetica/expert/data/products.pqt")
+        # new_product = duckdb.query("""
+        #     SELECT np.itemId,
+        #         np.categoryId,
+        #         np.pricelog2,
+        #         array_agg(opt.token) AS name_tokens
+        #     FROM new_product AS np
+        #     LEFT JOIN old_product_name_token AS opt
+        #     ON np.itemId = opt.itemId
+        #     GROUP BY np.itemId, np.categoryId, np.pricelog2                        
+        # """)
         new_product = duckdb.query("""
             SELECT np.itemId,
                 np.categoryId,
@@ -1355,7 +1371,7 @@ tasks:
 """
         with open(f"{dataset_path}/diginetica/old/metadata.yaml", "w") as f:
             f.write(old_yaml)
-        print("calculateing information")
+        logger.info("calculateing information")
         information = analyze_dataframes({'Table QueryResult': new_query_result, 'Table Click': new_click, 'Table View': new_view, 'Table Purchase': new_purchase, 'Table QuerySearchstringToken': new_query_search_string_tokens, 'Table Query': new_query, 'Table Product': new_product}, k = 5)
         with open(f"{dataset_path}/diginetica/information.txt", "w") as f:
             f.write(information)

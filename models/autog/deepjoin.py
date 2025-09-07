@@ -75,6 +75,8 @@ def analyze_column_values(df, column_name, context_length=512, df_name = ""):
     min_len = min(lengths)
     avg_len = sum(lengths) / len(lengths)
     tokens = f"{column_name} contains {str(n)} values ({str(max_len)}, {str(min_len)}, {str(avg_len)}): {col}"
+    nltk.download('punkt')
+    nltk.download('punkt_tab')
     tokens = nltk.word_tokenize(tokens)
     truncated_tokens = tokens[:context_length]
     truncated_sentence = ' '.join(truncated_tokens)

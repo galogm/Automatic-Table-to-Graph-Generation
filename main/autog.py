@@ -7,7 +7,8 @@ from models.autog.agent import AutoG_Agent
 from prompts.task import get_task_description
 from utils.misc import seed_everything
 from models.autog.agent import load_dbb_dataset_from_cfg_path_no_name
-
+import json
+from utils import logger
 
 def retrieve_input_schema(full_schema):
     input_schema = {
@@ -154,14 +155,6 @@ def main(
     # autog_path = os.path.join(path_of_the_dataset, "autog")
     # os.makedirs(autog_path, exist_ok=True)
 
-    # Load metadata
-    metainfo_path = os.path.join(path_of_the_dataset, 'type.txt')
-    metainfo = read_txt_dict(metainfo_path)
-    metainfo = {
-        key: value 
-        for key, value in metainfo.items()
-    }
-
     # Load dataset information
     information_path = os.path.join(path_of_the_dataset, f'information.txt')
     with open(information_path, 'r') as file:
@@ -169,13 +162,51 @@ def main(
 
     # Load and prepare data
     ## this can be under the old subdirectory or directly under the dataset directory
+    logger.info('=== metadata reading begins ===')
     if os.path.exists(os.path.join(path_of_the_dataset, 'metadata.yaml')):
         old_data_config_path = os.path.join(path_of_the_dataset)
     else:
         old_data_config_path = os.path.join(path_of_the_dataset, 'old')
         path_of_the_dataset = old_data_config_path
     multi_tabular_data = load_dbb_dataset_from_cfg_path_no_name(old_data_config_path)
+    logger.info('=== metadata reading ends ===')
     task_description = get_task_description(dataset, task_name)
+
+
+    # Load metadata
+    metainfo_path = os.path.join(path_of_the_dataset, 'type.txt')
+    if os.path.exists(metainfo_path):
+        metainfo = read_txt_dict(metainfo_path)
+    else:
+        logger.info('=== type construction begins ===')
+        from prompts.identify import identify_prompt
+        from models.llm.gconstruct import client
+        query = [
+                {"role": "user", "content": identify_prompt(multi_tabular_data.metadata.tables, information)},
+            ]
+        with open(os.path.join(path_of_the_dataset, 'query.json'), 'w', encoding='utf-8') as file:
+            json.dump(query[0], file, indent=2)
+
+        response = client.chat.completions.create(
+            model="Qwen3-30B-A3B-Thinking-2507",
+            messages=query,
+        )
+
+        with open(os.path.join(path_of_the_dataset, 'response.json'), 'w', encoding='utf-8') as file:
+            json.dump(response.to_dict(), file, indent=2, ensure_ascii=False)
+
+        logger.info('=== type construction ends ===')
+        metainfo = response.choices[0].message.content or ''
+        with open(metainfo_path, 'w', encoding='utf-8') as file:
+            file.write(metainfo)
+        metainfo = read_txt_dict(metainfo_path)
+        
+    metainfo = {
+        key: value 
+        for key, value in metainfo.items()
+    }
+
+
     schema_input = generate_training_metainfo(
         multi_tabular_data, 
         metainfo, 

@@ -972,6 +972,7 @@ def get_single_round_multi_step_prompt():
         AutoG-S
     """
     prompt = """
+<dataset_stats>
 Table: Paper
 {
   "Column": "PaperID",
@@ -1216,6 +1217,7 @@ def get_multi_round_single_step_prompt():
         AutoG-A
     """
     prompt = """
+<dataset_stats>
 Table: Paper
 {
   "Column": "PaperID",
@@ -1573,12 +1575,13 @@ def get_multi_round_action_selection_prompt(actions, example, history_actions, i
 
         
         Now, you need to 
-        1. Actively think about whether any one of the four actions should be conducted; If not, you can select "None" and then halt the program.
-        2. output all actions you can think of from the above list to perform, and output your selection in the following format. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.
+        1. Tell us Which LLM you are.
+        2. Actively think about whether any one of the four actions should be conducted; If not, you can select "None" and then halt the program.
+        3. Output all actions you can think of from the above list to perform, and output your selection in the following format. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.
         
         <selection>
-        [{{'explanation': <explanation for the selection>, 'action': <first action>, 'parameters': <parameters for the first action> }},
-        {{'explanation': <explanation for the selection>, 'action': <second action>, 'parameters': <parameters for the second action> }}, ...
+        [{{'name': <LLM name>, 'explanation': <explanation for the selection>, 'action': <first action>, 'parameters': <parameters for the first action> }},
+        {{'name': <LLM name>, 'explanation': <explanation for the selection>, 'action': <second action>, 'parameters': <parameters for the second action> }}, ...
         ]
         </selection>
 
