@@ -122,7 +122,7 @@ def fit_gml(
         )
         return val_metric, test_metric
 
-        train_metric, val_metric, test_metric = _fit_main(
+    train_metric, val_metric, test_metric = _fit_main(
         solution_class,
         dataset,
         data_config,

@@ -19,6 +19,7 @@ from dbinfer_bench.dataset_meta import DBBColumnSchema
 from dbinfer_bench.rdb_dataset import DBBRDBDataset
 from utils.misc import copy_directory
 from utils import logger
+from pathlib import Path
 
 def format_top_k_similarities(dbb, similarity_dict: Dict[Tuple[str, str, str, str], float], k: int) -> str:
     """Formats the top k most similar pairs into a string.
@@ -464,14 +465,18 @@ class AutoG_Agent():
         logger.info("Start to augment the schema")
         dbb_root_path = self.path_to_file
         dbb = load_dbb_dataset_from_cfg_path_no_name(dbb_root_path)
-        os.makedirs(os.path.join(self.path_to_file, 'final'),exist_ok=True)
-        plot_rdb_dataset_schema(dbb, os.path.join(self.path_to_file, 'final', 'original-schema-1'))
+
+        base_path = Path(self.path_to_file).parent.joinpath('autog')
+        save_path = base_path.joinpath('final')
+        save_path.mkdir(exist_ok=True,parents=True)
+
+        plot_rdb_dataset_schema(dbb, save_path.joinpath('original-schema').__str__())
         for i in range(self.threshold):
             logger.info(f"Round: {i}")
             ## generate the folder for round i
             
-            llm_path = os.path.join(self.path_to_file, f'{self.task_name}_round_{i}')
-            os.makedirs(llm_path, exist_ok=True)
+            llm_path = base_path.joinpath(f'{self.task_name}_round_{i}')
+            llm_path.mkdir(exist_ok=True,parents=True)
             res, need_continue = self.decide_next_step(dbb, llm_path)
             self.round += 1
             if need_continue == False:
@@ -480,14 +485,14 @@ class AutoG_Agent():
                 if self.error < 3:
                     logger.info("No more action can be taken")
                     # import ipdb; ipdb.set_trace()
-                    res.save(os.path.join(llm_path, 'final'))
+                    res.save(save_path)
                     ## plot the schema
-                    plot_rdb_dataset_schema(res, os.path.join(llm_path, 'schema-1'))
+                    plot_rdb_dataset_schema(res, save_path.joinpath('schema').__str__())
                     return
                 elif self.error >= 3:
                     logger.info("Too many errors, halt the process")
-                    res.save(os.path.join(llm_path, 'final'))
-                    plot_rdb_dataset_schema(res, os.path.join(llm_path, 'schema-1'))
+                    res.save(save_path)
+                    plot_rdb_dataset_schema(res, save_path.joinpath('schema').__str__())
                     return
             else:
                 dbb = res

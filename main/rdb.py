@@ -6,10 +6,7 @@ from utils.plot import plot_rdb_dataset_schema
 from dbinfer.cli import preprocess
 from dbinfer.cli import construct_graph
 from dbinfer.cli import fit_gml, GMLSolutionChoice
-import logging
-
-logger = logging.getLogger(__name__)
-logger.setLevel('DEBUG')
+from utils import logger
 
 def main(dataset: str = typer.Argument(
         "MAG", 
@@ -42,7 +39,7 @@ def main(dataset: str = typer.Argument(
             help="Checkpoint path."
         ),
          use_wandb: bool = typer.Option(
-                True,
+                False,
                 "--enable-wandb/--disable-wandb",
                 help="Whether to use wandb for logging"),
          plot_only: bool = typer.Option(

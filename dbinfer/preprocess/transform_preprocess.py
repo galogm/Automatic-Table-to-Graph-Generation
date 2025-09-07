@@ -108,15 +108,19 @@ class RDBTransformPreprocess(RDBDatasetPreprocess):
         task_data_fit, task_data_transform = self.extract_task_data(dataset)
         all_data_fit = _merge_rdb_and_task(rdb_data, task_data_fit)
         # import ipdb; ipdb.set_trace()
+        logger.debug("Fit_transform begins.")
         for xform in self.transforms:
             all_data_fit = xform.fit_transform(all_data_fit, device)
+        logger.debug("Fit_transform ends.")
         # import ipdb; ipdb.set_trace()
         new_task_data_transform = {}
+        logger.debug("transform begins.")
         for task_name, task_data in task_data_transform.items():
             logger.debug(f"Transform data of task {task_name}.")
             for xform in self.transforms:
                 task_data = xform.transform(task_data, device)
             new_task_data_transform[task_name] = task_data
+        logger.debug("transform ends.")
         new_rdb_data, new_task_data_fit = _split_rdb_and_task(all_data_fit)
 
         logger.debug(f"New RDB data:\n{new_rdb_data}")

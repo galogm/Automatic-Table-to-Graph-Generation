@@ -318,7 +318,7 @@ def dummy_llm_interaction(query_text: str, query_filepath: str = "results/query.
         llm_response = ""
         with open(response_filepath, 'r', encoding='utf-8') as r_file:
             llm_response = r_file.read()
-        logger.info(f"\nLLM response successfully read from: {os.path.abspath(response_filepath)}")
+        logger.info(f"LLM response successfully read from: {os.path.abspath(response_filepath)}")
 
         return llm_response
 

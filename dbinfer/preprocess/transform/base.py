@@ -103,7 +103,7 @@ def rdb_transform(transform_class):
     _RDB_TRANSFORM_REGISTRY[transform_class.name] = transform_class
     return transform_class
 
-def get_rdb_transform_class(name : str):
+def get_rdb_transform_class(name : str) -> RDBTransform:
     global _RDB_TRANSFORM_REGISTRY
     transform_class =  _RDB_TRANSFORM_REGISTRY.get(name, None)
     if transform_class is None:

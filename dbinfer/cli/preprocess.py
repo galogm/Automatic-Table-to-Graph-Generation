@@ -58,6 +58,7 @@ def preprocess(
 ):
     output_path = Path(output_path)
     device = get_device_info()
+    logger.debug(device)
     preprocess_class = get_rdb_preprocess_class(preprocess_name)
     if config_path is None:
         logger.info("No solution configuration file provided. Use default configuration.")
