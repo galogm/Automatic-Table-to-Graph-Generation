@@ -42,9 +42,6 @@ mkdir -p "$dataset_path/ieeecis/expert/fraud"
 python3 -u -m main.preprocessing_dataset IEEE-CIS $dataset_path
 
 # download MAG
-
-
-
 mkdir -p "$dataset_path/mag/raw"
 
 mkdir -p "$dataset_path/mag/old"

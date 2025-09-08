@@ -1,137 +1,275 @@
-# AutoG: Towards automatic graph construction from tabular data
+# LLM4RDB2Graph
 
-## Introduction
+## Public Datasets
 
-## Overview
+### Source
+- 4DBInfer
+  - [Paper](https://arxiv.org/pdf/2404.18209)
+  - [Repo](https://github.com/awslabs/multi-table-benchmark)
 
-AutoG is a novel framework that addresses the critical challenge of automatically constructing high-quality graphs from tabular data for graph machine learning (GML) applications. While GML has seen tremendous growth, the crucial step of converting tabular data into meaningful graphs remains largely manual and unstandardized. AutoG leverages Large Language Models (LLMs) to automate this process, producing graphs that rival those created by human experts.
+|   Dataset name   | Task names                    |
+| :--------------: | :---------------------------- |
+|      `avs`       | `repeater`                    |
+|      `mag`       | `cite`, `venue`               |
+|   `diginetica`   | `ctr`, `purchase`             |
+|  `retailrocket`  | `cvr`                         |
+|     `seznam`     | `charge`, `prepay`            |
+|     `amazon`     | `rating`, `purchase`, `churn` |
+| `stackexchange`  | `churn`, `upvote`             |
+| `outbrain-small` | `ctr`                         |
 
-### Key Features
 
-- Automatic graph schema generation without human intervention
-- LLM-based solution for high-quality graph construction
+| Dataset | # Rows | Task       | # Instances | Temporal |
+| :------ | :----- | :--------- | :---------- | :------- |
+| **AVS** | 350M   | Retention  | 160K        | ✓        |
+| **OB**  | 2B     | CTR        | 87K         | ✓        |
+| **DN**  | 3.7M   | CTR        | 120K        | ✓        |
+|         |        | Purchase   | 177K        | ✓        |
+| **RR**  | 23M    | CVR        | 100K        | ✓        |
+| **AB**  | 16M    | Churn      | 1.3M        | ✓        |
+|         |        | Rating     | 100K        | ✓        |
+|         |        | Purchase   | 1.1M        | ✓        |
+| **SE**  | 6.1M   | Churn      | 337K        | ✓        |
+|         |        | Popularity | 386K        | ✓        |
+| **MAG** | 23M    | Venue      | 736K        |          |
+|         |        | Citation   | 1.3M        |          |
+| **SZ**  | 2.7M   | Charge     | 554K        | ✓        |
+|         |        | Prepay     | 1.4M        | ✓        |
 
-## Installation
+### Format
 
-### Step 1: Clone the Repository
+Detailed demo: [notebook](./dataset_guide.ipynb)
 
-```bash
-git clone https://github.com/amazon-science/Automatic-Table-to-Graph-Generation
-
-cd Automatic-Table-to-Graph-Generation/
+1. `metadata.yaml` with metadata of `tables`, `columns`, `PK-FKs`, and `tasks`. E.g:
+```yaml
+dataset_name: outbrain-small
+tables:
+  - name: Event
+    source: data/events.pqt
+    format: parquet
+    columns:
+      - name: display_id
+        dtype: primary_key
+      - name: event_uuid
+        dtype: category
+      - name: document_id
+        dtype: foreign_key
+        link_to: DocumentsMeta.document_id
+      - name: platform
+        dtype: category
+      - name: timestamp
+        dtype: datetime
+      - name: geo_location
+        dtype: category
+    time_column: timestamp
+tasks:
+  - name: ctr
+    source: ctr/{split}.pqt
+    format: parquet
+    columns:
+      - name: cl_display_id
+        dtype: foreign_key
+        link_to: Event.display_id
+      - name: cl_ad_id
+        dtype: foreign_key
+        link_to: PromotedContent.ad_id
+      - name: clicked
+        dtype: category
+      - name: timestamp
+        dtype: datetime
+    time_column: timestamp
+    evaluation_metric: auroc
+    target_column: clicked
+    target_table: Click
+    task_type: classification
 ```
 
-### Step 2: Install Core Dependencies
-
-Recommend using docker to prepare the environment.
-``` bash 
-docker build -t autog .
-```
-
-Then create a mapping for consistent installation 
-``` bash
-docker run --gpus all -it -v ../Automatic-Table-to-Graph-Generation:/workspace -v ./opt:/opt autog /bin/bash
-```
-
-Then 
-``` bash
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && bash /tmp/miniconda.sh -b -p /opt/conda && rm /tmp/miniconda.sh
-conda init && source ~/.bashrc && cd /workspace/multi-table-benchmark && bash conda/create_conda_env.sh -s -g 11.7 -p 3.9 -t 1.13.1 
-source ~/.bashrc
-pip install codetiming humanfriendly sentence_transformers==3.3.0 transformers==4.44.2 nltk==3.9.1
-```
-
-```bash
-# Install 4dbinfer-related libraries
-cd multi-table-benchmark
-bash conda/create_conda_env.sh
-
-# Clone DeepJoin to download the language model
-git clone https://github.com/mutong184/deepjoin
-```
-
-### Step 3: Optional Dependencies
-These are required for development but not necessary if using cached LLM outputs:
-
-```bash
-pip install llama-index-llms-bedrock
-pip install llama-index
-pip install valentine
-```
-
-## Usage
-
-### 1. Dataset Preparation
-
-Generate the preprocessing dataset:
-
-```bash
-bash scripts/download.sh
-```
-
-This creates two dataset versions:
-- **Old Version**: A baseline preprocessed version using basic heuristics
-- **Expert Version**: Human expert-generated version with optimized column naming
-
-> Note: AutoG uses the 'old' version as input while ignoring the schema information. 
-
-### 2. Running AutoG
-
-To run the AutoG pipeline:
-
-```bash
-bash scripts/autog.sh
-```
-
-For detailed configuration options, see `scripts/autog.sh`.
-
-### 3. Running Graph Machine Learning
-
-Execute GML tasks on the constructed graphs:
-
-```bash
-bash scripts/run.sh
-```
-
-### Update: now we stick to a non-api version of the llm, you can directly run the script and then paste the output from your browser-end LLMs for quick testing.
-
-## Using AutoG with Custom Datasets
-
-Follow these steps to apply AutoG to your own data:
-
-1. Generate metadata information:
-   ```python
-   from models.llm.gconstruct import analyze_dataframes
-   metadata = analyze_dataframes(your_dataframe)
-   ```
-
-2. Generate initial type predictions:
-   ```python
-   from prompts import identify
-   types = identify(metadata)
-   ```
-
-3. Create a DBBRDBDataset wrapper for your data.
-
-4. Generate first-round prompts using AutoG.
-
-
-
-## Citation
-
-If you use AutoG in your research, please cite:
-
-```bibtex
-@inproceedings{
-chen2025autog,
-title={AutoG: Towards automatic graph construction from tabular data},
-author={Zhikai Chen and Han Xie and Jian Zhang and Xiang song and Jiliang Tang and Huzefa Rangwala and George Karypis},
-booktitle={The Thirteenth International Conference on Learning Representations},
-year={2025},
-url={https://openreview.net/forum?id=hovDbX4Gh6}
-}
+2. Directory Structure:
+```bash 
+data/avs/
+├── expert # schema defined by experts
+│   ├── data
+│   │   ├── history.pqt
+│   │   ├── offers.pqt
+│   │   └── transactions.pqt
+│   ├── metadata.yaml
+│   └── repeater
+│       ├── test.pqt
+│       ├── train.pqt
+│       └── validation.pqt
+├── information.txt # can be auto-generated by LLMs
+├── old # original schema
+│   ├── data
+│   │   ├── history.pqt
+│   │   ├── offers.pqt
+│   │   └── transactions.pqt
+│   ├── metadata.yaml
+│   ├── repeater
+│   │   ├── test.pqt
+│   │   ├── train.pqt
+│   │   └── validation.pqt
+│   └── type.txt
+└── raw # raw data
+    ├── 20240304-avs.tar
+    └── avs
+        ├── data
+        │   ├── history.pqt
+        │   │   └── part.0.parquet
+        │   ├── offers.pqt
+        │   │   └── part.0.parquet
+        │   └── transactions.pqt
+        │       ├── part.0.parquet
+        │       ├── part.10.parquet
+        ├── metadata.yaml
+        ├── repeater
+        │   ├── test.pqt
+        │   ├── train.pqt
+        │   └── validation.pqt
+        └── VERSION
 ```
 
 
 
+## New Datasets
 
+See detailed pipelines in [./main/preprocessing_dataset.py](./main/preprocessing_dataset.py). E.g:
+```bash 
+# 1. Read data, e.g., csv, e.t.c.
+# 2. Prepare and save tables in npz or pqt
+# 3. Prepare and save metadata.yaml
+```
+
+A detailed Demo:
+
+```py
+# 1. Read data
+transaction_df =  pd.read_csv(f"{dataset_path}/ieeecis/raw/train_transaction.csv")
+identity_df = pd.read_csv(f"{dataset_path}/ieeecis/raw/train_identity.csv")
+
+# 2. prepare metadata
+meta_info = {}
+meta_info['dataset_name'] = "ieeecis"
+meta_info['tables'] = []
+
+
+# 3. Prepare and save tables
+
+# Prepocess `transaction` Table
+transaction_df['index'] = transaction_df.index
+transaction_df.drop(columns=["TransactionDT"], inplace=True)
+transaction_df['TransactionAmt'] = np.log1p(transaction_df['TransactionAmt'])
+transaction_df.rename(columns={"ProductCD": "ProductCode"}, inplace=True) 
+card_rename = {f"card{i}": f"card_meta_info_{i}" for i in range(1, 7)}
+transaction_df.rename(columns=card_rename, inplace=True)
+transaction_df.rename(columns={"addr1": "purchaser billing region", "addr2": "purchaser billing country"}, inplace=True)
+transaction_df.rename(columns={"P_emaildomain": "purchaser email domain", "R_emaildomain": "recipient email domain"}, inplace=True)
+counting_rename = {f"C{i}": f"payment_card_related_counting_{i}" for i in range(1, 15)}
+timedelta_rename = {f"D{i}": f"timedelta_{i}" for i in range(1, 16)}
+transaction_df.rename(columns=counting_rename, inplace=True)
+transaction_df.rename(columns=timedelta_rename, inplace=True)
+match_rename = {f"M{i}": f"match_{i}" for i in range(1, 10)}
+transaction_df.rename(columns=match_rename, inplace=True)
+transaction_categorical_columns = ["ProductCode", "card_meta_info_1", "card_meta_info_2", "card_meta_info_3", "card_meta_info_4", "card_meta_info_5", "card_meta_info_6", "purchaser billing region", "purchaser billing country", "purchaser email domain", "recipient email domain", "match_1", "match_2", "match_3", "match_4", "match_5", "match_6", "match_7", "match_8", "match_9"]
+id_rename_dict = {f"id_{i:02d}": f"identity_{i}_info" for i in range(1, 39)}
+identity_df.rename(columns=id_rename_dict, inplace=True)
+identity_categorical_columns = [f"identity_{i}_info" for i in range(12, 39)]
+identity_categorical_columns = identity_categorical_columns + ["DeviceType", "DeviceInfo"]
+
+# Generate dict for the transaction table
+transaction_dict = {}
+transaction_value = {}
+identity_dict = {}
+identity_value = {}
+transaction_dict["name"] = "Transaction"
+transaction_dict["source"] = "data/transaction.npz"
+transaction_dict["format"] = "numpy"
+transaction_dict["columns"] = []
+for c in transaction_categorical_columns:
+    col = {}
+    col["name"] = c
+    col["dtype"] = "category"
+    transaction_dict["columns"].append(col)
+    transaction_value[c] = transaction_df[c].values
+transaction_dict["columns"].append({"name": "TransactionID", "dtype": "primary_key"})
+transaction_value["TransactionID"] = transaction_df["TransactionID"].values
+transaction_dict["columns"].append({"name": "isFraud", "dtype": "category"})
+transaction_value["isFraud"] = transaction_df["isFraud"].values
+transaction_dict["columns"].append({"name": "TransactionAmt", "dtype": "float"})
+transaction_value["TransactionAmt"] = transaction_df["TransactionAmt"].values
+transaction_dict["columns"].append({"name": "distance", "dtype": "float"})
+transaction_value["distance"] = transaction_df[["dist1", "dist2"]].values
+counting_features = [f"payment_card_related_counting_{i}" for i in range(1, 15)]
+timedelta_features = [f"timedelta_{i}" for i in range(1, 16)]
+counting_features = transaction_df[counting_features].values 
+timedelta_features = transaction_df[timedelta_features].values
+transaction_dict["columns"].append({"name": "payment_card_related_counting", "dtype": "float" })
+transaction_value["payment_card_related_counting"] = counting_features
+transaction_dict["columns"].append({"name": "timedelta", "dtype": "float" })
+transaction_value["timedelta"] = timedelta_features
+vesta_features = [f"V{i}" for i in range(1, 340)]
+vesta_features = transaction_df[vesta_features].values
+transaction_dict["columns"].append({"name": "vesta_features", "dtype": "float"})
+transaction_value["vesta_features"] = vesta_features
+
+# Save transaction table
+meta_info['tables'].append(transaction_dict)
+np.savez_compressed(f"{dataset_path}/ieeecis/old/data/transaction.npz", **transaction_value)
+
+
+# Prepocess `Identity` Table
+identity_dict["name"] = "Identity"
+identity_dict["source"] = "data/identity.npz"
+identity_dict["format"] = "numpy"
+identity_dict["columns"] = []
+for c in identity_categorical_columns:
+    col = {}
+    col["name"] = c
+    col["dtype"] = "category"
+    identity_dict["columns"].append(col)
+    identity_value[c] = identity_df[c].values
+identity_dict["columns"].append({"name": "TransactionID", "dtype": "foreign_key", "link_to": "Transaction.TransactionID"})
+identity_value["TransactionID"] = identity_df["TransactionID"].values
+id_related_features = [f"identity_{i}_info" for i in range(1, 12)]
+id_related_features = identity_df[id_related_features].values
+identity_dict["columns"].append({"name": "id_related_features", "dtype": "float"})
+identity_value["id_related_features"] = id_related_features
+
+# save `Identity` Table
+meta_info['tables'].append(identity_dict)
+np.savez_compressed(f"{dataset_path}/ieeecis/old/data/identity.npz", **identity_value)       
+
+# save tasks in metadata
+meta_info['tasks'] = []
+task_dict = {}
+task_dict["name"] = "fraud"
+task_dict['source'] = "fraud/{split}.npz"
+task_dict['format'] = "numpy"
+task_dict['evaluation_metric'] = "auroc"
+task_dict['target_column'] = "isFraud"
+task_dict['target_table'] = "Transaction"
+task_dict['task_type'] = "classification"
+task_dict['columns'] = transaction_dict["columns"]
+meta_info['tasks'].append(task_dict)
+
+# 4. Save `metadata.yaml`
+with open(f"{dataset_path}/ieeecis/old/metadata.yaml", "w") as f:
+    yaml.dump(meta_info, f)
+
+
+# 5. Save train/valid/test splits
+from utils.training import extract_train_val_test_id_from_objects, train_val_test_split
+
+train_splits = {}
+val_splits = {}
+test_splits = {}
+splits_id = np.arange(len(transaction_df))
+train_idx, val_idx, test_idx = train_val_test_split(splits_id, stratify=transaction_df["isFraud"].values, train_size=0.2, val_size=0.1, test_size=0.7)
+for key, val in transaction_value.items():
+    train_splits[key] = val[train_idx]
+    val_splits[key] = val[val_idx]
+    test_splits[key] = val[test_idx]
+
+np.savez_compressed(f"{dataset_path}/ieeecis/old/fraud/train.npz", **train_splits)
+np.savez_compressed(f"{dataset_path}/ieeecis/old/fraud/validation.npz", **val_splits)
+np.savez_compressed(f"{dataset_path}/ieeecis/old/fraud/test.npz", **test_splits)
+```

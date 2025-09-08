@@ -466,7 +466,7 @@ class AutoG_Agent():
         dbb_root_path = self.path_to_file
         dbb = load_dbb_dataset_from_cfg_path_no_name(dbb_root_path)
 
-        base_path = Path(self.path_to_file).parent.joinpath('autog')
+        base_path = Path(self.path_to_file).parent.joinpath('autog', self.task_name)
         save_path = base_path.joinpath('final')
         save_path.mkdir(exist_ok=True,parents=True)
 

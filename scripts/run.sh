@@ -25,6 +25,20 @@ CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb OBS ./data/outbrain/expe
 
 
 
+## stackexchange
+
+CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/expert ./data/stackexchange/expert/ r2n sage churn -c configs/stackexchange/sage.yaml > logs/stackexchange-churn-expert.log &
+
+CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/expert ./data/stackexchange/expert/ r2n sage upvote -c configs/stackexchange/sage.yaml > logs/stackexchange-upvote-expert.log &
+
+CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/autog/final ./data/stackexchange/autog/final/ r2n sage churn -c configs/stackexchange/sage.yaml > logs/stackexchange-churn-final.log &
+
+CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/autog/final ./data/stackexchange/autog/final/ r2n sage upvote -c configs/stackexchange/sage.yaml > logs/stackexchange-upvote-final.log &
+
+
+
+
+
 ## mag venue
 
 CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb MAG ./data/mag/autog/final ./data/mag/autog/final/ r2ne sage venue -c configs/mag/oracle-venue.yaml > logs/mag-venue-final.log &
@@ -48,34 +62,26 @@ CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb MAG ./data/mag/autog/rou
 ## expert result
 CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb MAG ./data/mag/expert ./data/mag/expert/ r2n sage year -c configs/mag/oracle-year.yaml > logs/mag-year-expert.log &
 
-# ## ieee-cis needs autog-a and pattern search to get not that bad results
 
+
+
+# ## ieee-cis needs autog-a and pattern search to get not that bad results
 
 CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb IEEE ./data/ieeecis/autog/expert ./data/ieeecis/expert/ r2n sage fraud -c configs/ieee-cis/sage.yaml > logs/ieeecis-fraud-expert.log &
 
 CUDA_VISIBLE_DEVICES=1 nohup python3 -u -m main.rdb IEEE ./data/ieeecis/autog/round_0 ./data/ieeecis/autog/round_0 r2n sage fraud -c configs/ieee-cis/oracle-fraud.yaml > logs/ieeecis-fraud-round_0.log &
 
 
+
+
 ## avs dataset
 
-
-## avs autog
 CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb AVS ./data/avs/autog/final ./data/avs/autog/final/ r2n sage repeater -c configs/avs/oracle-repeater.yaml > logs/avs-repeater-final.log &
-
-## expert
 
 CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb AVS ./data/avs/expert ./data/avs/expert/ r2n sage repeater -c configs/avs/oracle-repeater.yaml > logs/avs-repeater-expert.log &
 
 
-## stackexchange
 
-CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/expert ./data/stackexchange/expert/ r2n sage churn -c configs/stackexchange/sage.yaml > logs/stackexchange-churn-expert.log &
-
-CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/expert ./data/stackexchange/expert/ r2n sage upvote -c configs/stackexchange/sage.yaml > logs/stackexchange-upvote-expert.log &
-
-CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/autog/final ./data/stackexchange/autog/final/ r2n sage churn -c configs/stackexchange/sage.yaml > logs/stackexchange-churn-final.log &
-
-CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb STE ./data/stackexchange/autog/final ./data/stackexchange/autog/final/ r2n sage upvote -c configs/stackexchange/sage.yaml > logs/stackexchange-upvote-final.log &
 
 ## diginetica
 

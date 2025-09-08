@@ -42,6 +42,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 from dbinfer_bench import (
     DBBGraphDataset,
