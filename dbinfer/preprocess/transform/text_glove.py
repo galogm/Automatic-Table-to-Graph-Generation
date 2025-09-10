@@ -120,7 +120,9 @@ class GloveTextEmbeddingTransform(ColumnTransform):
         cache_file = cache_dir / f"{safe_dataset}_{safe_column}_{model_safe}_{dim}.npy"
         if cache_file.exists():
             return 
+        logger.info(f"{self.config.model_name}-{self.config.dim}")
         self.model = api.load(f"{self.config.model_name}-{self.config.dim}")
+        logger.info(f"fit Done.")
         assert self.model.vector_size == self.config.dim, \
             "Dimension of the model does not match the config."
 
@@ -147,29 +149,36 @@ class GloveTextEmbeddingTransform(ColumnTransform):
         cache_file = cache_dir / f"{safe_dataset}_{safe_column}_{model_safe}_{dim}.npy"
 
         if cache_file.exists():
-            logger.info(f"Loading cached embeddings from {cache_file}")
-            new_data = np.load(cache_file)
+            try:
+                logger.info(f"Loading cached embeddings from {cache_file}")
+                new_data = np.load(cache_file)
+                return [ColumnData(self.new_meta, new_data)]
+            except:
+                logger.warning(f'Cached model in {cache_file} not work.')
+
+        data = column.data
+        num_procs = min(device.cpu_count // 2, self.config.max_num_procs)
+        if num_procs > 1:
+            logger.info("Spawn workers to generate embeddings using multi-CPU kernels.")
+            ctx = mp.get_context('spawn')
+            worklist = np.array_split(data, num_procs)
+            self.fit(column, device)
+            logger.info(f"apply_async begins")
+            with ctx.Pool(processes=num_procs) as pool:
+                results = []
+                for proc_id in range(num_procs):
+                    rst = pool.apply_async(
+                        _run_one_proc,
+                        (proc_id, self.model, self.config.dim, worklist[proc_id])
+                    )
+                    results.append(rst)
+                results = [rst.get() for rst in results]
+            logger.info(f"apply_async ends")
+            new_data = np.concatenate(results, axis=0).astype('float32')
         else:
-            data = column.data
-            num_procs = min(device.cpu_count // 2, self.config.max_num_procs)
-            if num_procs > 1:
-                logger.info("Spawn workers to generate embeddings using multi-CPU kernels.")
-                ctx = mp.get_context('spawn')
-                worklist = np.array_split(data, num_procs)
-                with ctx.Pool(processes=num_procs) as pool:
-                    results = []
-                    for proc_id in range(num_procs):
-                        rst = pool.apply_async(
-                            _run_one_proc,
-                            (proc_id, self.model, self.config.dim, worklist[proc_id])
-                        )
-                        results.append(rst)
-                    results = [rst.get() for rst in results]
-                new_data = np.concatenate(results, axis=0).astype('float32')
-            else:
-                new_data = _run_one_proc(0, self.model, self.config.dim, data)
-            
-            logger.info(f"Saving embeddings to cache at {cache_file}")
-            np.save(cache_file, new_data)
+            new_data = _run_one_proc(0, self.model, self.config.dim, data)
+        
+        logger.info(f"Saving embeddings to cache at {cache_file}")
+        np.save(cache_file, new_data)
         
         return [ColumnData(self.new_meta, new_data)]
