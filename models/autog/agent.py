@@ -334,6 +334,7 @@ class AutoG_Agent():
                     ## if autog-a, update after every action, otherwise update once
                 if self.need_update_task:
                     this_round_dbb = self.update_task(this_round_dbb)
+                logger.info(f"DONE.")
             except Exception as e:
                 ## recover from error
                 logger.info(f"Error: {e}")

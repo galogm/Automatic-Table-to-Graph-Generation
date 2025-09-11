@@ -11,4 +11,4 @@ mkdir -p "$dataset_path/diginetica/expert/ctr" && \
 mkdir -p "$dataset_path/diginetica/old/purchase" && \
 mkdir -p "$dataset_path/diginetica/expert/purchase" && \
 python3 -u -m dbinfer.main download diginetica  && 
-python3 -u -m main.preprocessing_dataset diginetica"  && echo DONE > logs/dl_DN.log  2>&1 & echo $!
+python3 -u -m main.preprocessing_dataset diginetica && echo DONE " > logs/dl_DN.log  2>&1 & echo $!

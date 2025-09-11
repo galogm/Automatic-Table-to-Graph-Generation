@@ -1,5 +1,6 @@
 # avs
-CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.autog avs data autog-s type.txt repeater && python3 -u -m main.rdb AVS ./data/avs/autog/final ./data/avs/autog/final/ r2n sage repeater -c configs/avs/oracle-repeater.yaml > logs/avs-repeater-final-autog_eval.log  2>&1 &
+tsk=repeater
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog avs data autog-s type.txt $tsk && python3 -u -m main.rdb AVS ./data/avs/autog/$tsk/final ./data/avs/autog/$tsk/final/ r2n sage $tsk -c configs/avs/oracle-$tsk.yaml" > logs/avs-$tsk-final-autog_eval.log  2>&1 &
 
 
 # retailrocket
@@ -7,9 +8,10 @@ CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog retailrocket 
 
 
 # diginetica
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog diginetica data autog-s type.txt purchase && python3 -u -m main.rdb DIG ./data/diginetica/autog/purchase/final/ ./data/diginetica/autog/purchase/final/ r2ne sage purchase -c multi-table-benchmark/hpo_results/diginetica/purchase/r2ne-sage.yaml" > logs/diginetica-purchase-final.log 2>&1 &
-
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog diginetica data autog-s type.txt ctr && python3 -u -m main.rdb DIG ./data/diginetica/autog/ctr/final/ ./data/diginetica/autog/ctr/final/ r2ne sage ctr -c multi-table-benchmark/hpo_results/diginetica/ctr/r2ne-sage.yaml" > logs/diginetica-ctr-final.log 2>&1 &
+tsk=purchase
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog diginetica data autog-s type.txt $tsk && python3 -u -m main.rdb DIG ./data/diginetica/autog/$tsk/final/ ./data/diginetica/autog/$tsk/final/ r2ne sage $tsk -c multi-table-benchmark/hpo_results/diginetica/$tsk/r2ne-sage.yaml" > logs/diginetica-$tsk-final.log 2>&1 &
+tsk=ctr
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog diginetica data autog-s type.txt $tsk && python3 -u -m main.rdb DIG ./data/diginetica/autog/$tsk/final/ ./data/diginetica/autog/$tsk/final/ r2ne sage $tsk -c multi-table-benchmark/hpo_results/diginetica/$tsk/r2ne-sage.yaml" > logs/diginetica-$tsk-final.log 2>&1 &
 
 
 # ieeecis
@@ -22,4 +24,22 @@ CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data auto
 tsk=cite
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2ne sage $tsk -c configs/mag/oracle-$tsk.yaml" > logs/mag-$tsk-final.log  2>&1 &
 tsk=year
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2ne sage $tsk -c configs/mag/oracle-$tsk.yaml" > logs/mag-$tsk-final.log  2>&1 &
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2n sage $tsk -c configs/mag/oracle-$tsk.yaml" > logs/mag-$tsk-final.log  2>&1 &
+
+
+
+# stackexchange
+tsk=churn
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog stackexchange data autog-s type.txt $tsk && python3 -u -m main.rdb STE ./data/stackexchange/autog/$tsk/final ./data/stackexchange/autog/$tsk/final/ r2n sage $tsk -c configs/stackexchange/sage.yaml" > logs/stackexchange-$tsk-final.log 2>&1 &
+tsk=upvote
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog stackexchange data autog-s type.txt $tsk && python3 -u -m main.rdb STE ./data/stackexchange/autog/$tsk/final ./data/stackexchange/autog/$tsk/final/ r2n sage $tsk -c configs/stackexchange/sage.yaml" > logs/stackexchange-$tsk-final.log 2>&1 &
+
+
+# Outbrain
+tsk=ctr
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog outbrain data autog-s type.txt $tsk && python3 -u -m main.rdb OBS ./data/outbrain/autog/$tsk/final ./data/outbrain/autog/$tsk/final/ r2n sage $tsk -c configs/outbrain-small/oracle-$tsk.yaml" > logs/outbrain-$tsk-final.log &
+
+
+# movielens
+tsk=ratings
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autog/$tsk/final ./data/movielens/autog/$tsk/final r2ne sage $tsk -c configs/movielens/sage-r2ne.yaml" > logs/movielens-$tsk-final.log &

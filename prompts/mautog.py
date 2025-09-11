@@ -1505,7 +1505,11 @@ def get_multi_round_action_selection_prompt_epoch(actions, example, history_acti
         
         Now, you need to 
         1. Actively think about whether any one of the four actions should be conducted; If not, you can select "None" and then halt the program.
-        2. Output the selected action
+        2. Any action you choose should facilitate the performance of the given task with a RGCN model, and explain its benefits **in the explanation part**. 
+        3. DO NOT generate new relationships that are possible but unhelpful.
+        4. Name new columns or tables **in a semantically informative way**.
+        5. **Double-CHECK** that the parameters used are consistent with their original names or with the names introduced in the previous actions.
+        6. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.
         
         <selection>
         [{{'explanation': <explanation for the selection>, 'action': <selected action>, 'parameters': <parameters for the action> }}]
@@ -1575,13 +1579,16 @@ def get_multi_round_action_selection_prompt(actions, example, history_actions, i
 
         
         Now, you need to 
-        1. Tell us Which LLM you are.
-        2. Actively think about whether any one of the four actions should be conducted; If not, you can select "None" and then halt the program.
-        3. Output all actions you can think of from the above list to perform, and output your selection in the following format. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.
+        1. Actively think about whether any one of the four actions should be conducted for the given task; If not, you can select "None" and then halt the program.
+        2. Output all actions you can think of from the above list to perform, and output your selection in the following format. Any action you choose should facilitate the performance of the given task with a RGCN model, and **explain its benefits in the explanation part**. 
+        3. DO NOT generate new relationships that are possible but unhelpful.
+        4. Name new columns or tables **in a semantically informative way**.
+        5. **Double-CHECK** that the parameters used are consistent with their original names or with the names introduced in the previous actions.
+        6. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.
         
         <selection>
-        [{{'name': <LLM name>, 'explanation': <explanation for the selection>, 'action': <first action>, 'parameters': <parameters for the first action> }},
-        {{'name': <LLM name>, 'explanation': <explanation for the selection>, 'action': <second action>, 'parameters': <parameters for the second action> }}, ...
+        [{{'explanation': <explanation for the selection>, 'action': <first action>, 'parameters': <parameters for the first action> }},
+        {{'explanation': <explanation for the selection>, 'action': <second action>, 'parameters': <parameters for the second action> }}, ...
         ]
         </selection>
 
