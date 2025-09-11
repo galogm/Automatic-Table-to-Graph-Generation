@@ -89,10 +89,28 @@ def remove_primary_key(dbb, base_table_name, col_name):
         if table.name == f'{base_table_name}':
             for j, column in enumerate(table.columns):
                 if column.name == f'{col_name}':
-                    del_col_idx = j
-            del_table_idx = i
-    tables[del_table_idx].columns.pop(del_col_idx)
+                    column.dtype = 'category'
+                    # del_col_idx = j
+                    # break
+            # del_table_idx = i
+    # tables[del_table_idx].columns.pop(del_col_idx)
     dbb.metadata.tables = tables
+
+    # tasks=dbb.metadata.tasks
+    # # logger.info(tasks[0])
+    # for i, task in enumerate(tasks):
+    #     if task.target_table == f'{base_table_name}':
+    #         for j, column in enumerate(task.columns):
+    #             if column.name == f'{col_name}':
+    #                 # column.dtype = 'category'
+    #                 del_col_idx = j
+    #                 break
+    #         del_task_idx = i
+    # # logger.info(del_col_idx, del_task_idx)
+    # tasks[del_task_idx].columns.pop(del_col_idx)
+    # dbb.metadata.tasks = tasks
+    # print(dbb.metadata)
+    logger.info('Update tables 1.')
     return dbb
 
 def add_primary_key(dbb, base_table_name, col_name):
@@ -167,6 +185,7 @@ def generate_or_connect_dummy_table(dbb, base_table_name, orig_col_name, new_tab
             tables[i] = table
             break
     dbb.metadata.tables = tables
+    logger.info('Update tables 2.')
     return dbb
 
 def number_of_pks(dbb):
@@ -220,6 +239,8 @@ def connect_two_columns_with_non_key_type(dbb, table_1_name, table_1_col_name, t
                 if column.name == f'{table_1_col_name}' or column.name == f'{table_2_col_name}':
                     column.dtype = 'foreign_key'
                     column.link_to = f'{new_table_name}.{new_table_pk_col_name}'
+                    # dbb.metadata.tables[table.name].columns[column.name].dtype = 'foreign_key'
+                    # dbb.metadata.tables[table.name].columns[column.name].link_to = f'{new_table_name}.{new_table_pk_col_name}'
     ## create a new table
     new_table = DBBTableSchema(
         name=new_table_name,
@@ -230,6 +251,8 @@ def connect_two_columns_with_non_key_type(dbb, table_1_name, table_1_col_name, t
         format = 'parquet', 
         source = f'data/{new_table_name}.parquet'
     ) 
+    logger.info('Update tables 3.')
+    dbb.metadata.tables = tables
     dbb.metadata.tables.append(new_table)
     ## add the data to the new table
     new_table_data = {new_table_pk_col_name: np.arange(len(union_col_data)), new_col_name: union_col_data}
@@ -285,8 +308,10 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
     ## trivial case, both fk and point to the same, 或者 colum 类型不同 directly return
     # import ipdb; ipdb.set_trace()
     if type_of_col1 == 'foreign_key' and type_of_col2 == 'foreign_key' and columninfo_dict[f'{table_1_name}.{table_1_col_name}'].link_to == columninfo_dict[f'{table_2_name}.{table_2_col_name}'].link_to:
+        logger.info('Update tables 9.')
         return dbb
-    if type_of_col1 != type_of_col2:
+    if type_of_col1 != type_of_col2 and type_of_col2 not in ['primary_key', 'foreign_key']:
+        logger.info('Update tables 10.')
         return dbb 
     
     ## two non key types with the same type 
@@ -380,6 +405,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
 
     if direct_connect:
         dbb.metadata.tables = tables
+        logger.info('Update tables 4.')
         return dbb
     
     for i, table in enumerate(tables):
@@ -429,6 +455,7 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
                 if column.dtype == 'foreign_key' and column.link_to == old_link_to:
                     # NOTE: 更新 table_1 外键映射 table_2 主键或外键映射的主键
                     table.columns[j].link_to = new_link_to
+        logger.info('Update tables 5.')
         dbb.metadata.tables = tables
         return dbb
     # if add_fk:
@@ -452,6 +479,8 @@ def connect_two_columns(dbb, table_1_name, table_1_col_name, table_2_name, table
     #     data = dbb.tables[table_1_name]
     #     data[f'{table_1_col_name}'] = [mapping[val] for val in data[f'{table_1_col_name}']]
     #     dbb.tables[table_1_name] = data
+    logger.info('Update tables 6.')
+    dbb.metadata.tables = tables
     return dbb
 
 def explode_multi_category_column(dbb, original_table, multi_cat_col, primary_key_column, new_table_name, new_col_name, dtype, **kwargs):
@@ -548,6 +577,7 @@ def explode_multi_category_column(dbb, original_table, multi_cat_col, primary_ke
     new_df_dict = {col: new_df[col].to_numpy() for col in new_df.columns}
     dbb.tables[new_table_name] = new_df_dict
     dbb.tables[original_table] = data
+    logger.info('Update tables 7.')
     return dbb
 
 def generate_non_dummy_table(dbb, base_table_name, cols, new_table_name, **kwargs):
@@ -605,5 +635,6 @@ def generate_non_dummy_table(dbb, base_table_name, cols, new_table_name, **kwarg
     dbb.tables[base_table_name] = data
     new_df_dict = {col: df_new[col].to_numpy() for col in df_new.columns}
     dbb.tables[new_table_name] = new_df_dict
+    logger.info('Update tables 8.')
     return dbb
     
