@@ -72,6 +72,7 @@ class DBBColumnSchema(pydantic.BaseModel):
     name : str
     # Column data type.
     dtype : DBBColumnDType
+    link_to: Optional[str] = None
 
 class DBBTableDataFormat(str, Enum):
     PARQUET = 'parquet'

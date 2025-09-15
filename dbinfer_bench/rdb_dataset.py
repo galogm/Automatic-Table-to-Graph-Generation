@@ -44,6 +44,7 @@ from .dataset_meta import (
     DBBColumnID,
     DBBRelationship,
     DBBRDBDatasetMeta,
+    DBBTableDataFormat,
 )
 from .table_loader import get_table_data_loader
 from .table_writer import get_table_data_writer
@@ -397,6 +398,7 @@ class DBBRDBDatasetCreator:
 
         # Write table data.
         table_writer = get_table_data_writer(table_format)
+        table_writer_pqt = get_table_data_writer(DBBTableDataFormat.PARQUET)
         schemas = []
         for table_name, table_info in self.tables.items():
             data_dir = path / 'data'
@@ -407,6 +409,7 @@ class DBBRDBDatasetCreator:
                 table_data[col_name] = col_info.pop("data")
                 col_schemas.append(col_info)
             table_writer.write(data_dir, table_name, table_data)
+            table_writer_pqt.write(data_dir, table_name, table_data)
             source = str(table_writer.filename(data_dir, table_name).relative_to(path))
             schema = DBBTableSchema.parse_obj({
                 'name' : table_name,

@@ -37,6 +37,9 @@ class ParquetTableWriter(TableWriter):
 
     def write(self, path: Path, table_name: str, table_data: Dict[str, np.ndarray]):
         filename = self.filename(path, table_name)
+        for k,v in table_data.items():
+            if isinstance(v, np.ndarray) and v.ndim > 1:
+                table_data[k] = v.tolist()
         df = pd.DataFrame(table_data)
         df.to_parquet(filename)
 
