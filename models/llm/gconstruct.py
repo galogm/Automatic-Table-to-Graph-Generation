@@ -40,8 +40,8 @@ def extract_between_tags(text, tag_name):
         if no matching tags are found.
     """
 
-    pattern = rf"<{tag_name}>([^<]+)</{tag_name}>"
-    matches = re.findall(pattern, text)
+    pattern = rf"<{tag_name}>(.*?)</{tag_name}>"
+    matches = re.findall(pattern, text, flags=re.DOTALL)
     return matches
 
 def remove_comments(code_string):

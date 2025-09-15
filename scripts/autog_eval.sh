@@ -1,3 +1,15 @@
+# AutoG & AutoM
+
+# movielens
+tsk=ratings
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autom movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autom/$tsk/final ./data/movielens/autom/$tsk/final r2n sage $tsk -c configs/movielens/sage-r2ne.yaml" > logs/movielens-autom-$tsk-final.log &
+
+
+
+
+
+# AutoG
+
 # avs
 tsk=repeater
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog avs data autog-s type.txt $tsk && python3 -u -m main.rdb AVS ./data/avs/autog/$tsk/final ./data/avs/autog/$tsk/final/ r2n sage $tsk -c configs/avs/oracle-$tsk.yaml" > logs/avs-$tsk-final-autog_eval.log  2>&1 &
@@ -42,4 +54,5 @@ CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog outbrain data
 
 # movielens
 tsk=ratings
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autog/$tsk/final ./data/movielens/autog/$tsk/final r2ne sage $tsk -c configs/movielens/sage-r2ne.yaml" > logs/movielens-$tsk-final.log &
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autog/$tsk/final ./data/movielens/autog/$tsk/final r2n sage $tsk -c configs/movielens/sage-r2ne.yaml" > logs/movielens-$tsk-final.log &
+
