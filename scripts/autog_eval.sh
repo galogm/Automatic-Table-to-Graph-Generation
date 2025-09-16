@@ -2,9 +2,10 @@
 
 # movielens
 tsk=ratings
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autom movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autom/$tsk/final ./data/movielens/autom/$tsk/final r2n sage $tsk -c configs/movielens/sage-r2ne.yaml" > logs/movielens-autom-$tsk-final.log &
+uc=1
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autom movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autom/$tsk/final ./data/movielens/autom/$tsk/final r2n sage $tsk -c configs/movielens/sage-r2ne.yaml --use-cache $uc" > logs/movielens-autom-$tsk-final.log &
 
-
+log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;task=ratings;method=r2n;use_cache=1;mkdir -p $log_dir;nohup python -u -m scripts.search --gpu=$gpu --model $model --task $task --method $method --use_cache $use_cache --dataset=$d --n_trials=10 --n_jobs=2 > $log_dir/$method-$model-$task-$id.log 2>&1 & echo $!
 
 
 

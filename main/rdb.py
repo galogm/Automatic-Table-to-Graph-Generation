@@ -7,6 +7,7 @@ from dbinfer.cli import preprocess
 from dbinfer.cli import construct_graph
 from dbinfer.cli import fit_gml, GMLSolutionChoice
 from utils import logger
+from utils.rdb import name_id_mapping
 
 def main(dataset: str = typer.Argument(
         "MAG", 
@@ -60,8 +61,9 @@ def main(dataset: str = typer.Argument(
                 help="Whether to use the cache for the dataset")
          ):
     
-    loaded_rdb_dataset, data_id = load_dbb_dataset_from_cfg_path(dataset, schema_path)
-    plot_rdb_dataset_schema(loaded_rdb_dataset, f"{cache_path}/{data_id}-schema")
+    # loaded_rdb_dataset, data_id = load_dbb_dataset_from_cfg_path(dataset, schema_path)
+    # plot_rdb_dataset_schema(loaded_rdb_dataset, f"{cache_path}/{data_id}-schema")
+    data_id = name_id_mapping[dataset]
     if plot_only or stats_only:
         return
     if use_cache and osp.exists(f"{cache_path}/{data_id}/{data_id}-preprocessed"):
@@ -89,6 +91,7 @@ def main(dataset: str = typer.Argument(
         logger.info(f"Graph constructed at {output_g_path}")
     if skip_train:
         return
+
     fit_gml(
         output_g_path, 
         task_name,

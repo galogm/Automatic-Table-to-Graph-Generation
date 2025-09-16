@@ -402,7 +402,7 @@ class AutoM_Agent:
         base_path = Path(self.path_to_file).parent.parent.parent.joinpath(
             "autom", self.task_name
         )
-        save_path = base_path.joinpath("final")
+        save_path = base_path / "final"
         save_path.mkdir(exist_ok=True, parents=True)
         self.autom_path = save_path
 
