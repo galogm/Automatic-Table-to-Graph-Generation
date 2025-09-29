@@ -16,7 +16,10 @@ import torch
 import torch.nn.functional as F
 import torchmetrics.functional as MF
 import torchmetrics.retrieval as MR
-from dbinfer_bench import DBBTaskType, DBBTaskMeta
+from dbinfer_bench import DBBTaskType, DBBTaskMeta, DBBGraphDataset
+from dgl import to_networkx
+from networkx import Graph
+from typing import List, Tuple
 
 negated = lambda f: lambda *args, **kwargs: -f(*args, **kwargs)
 
@@ -101,3 +104,60 @@ LOSS_FN = {
 def get_loss_fn(meta : DBBTaskMeta):
     fn = LOSS_FN[meta.task_type]
     return fn
+
+
+def louvain(edges: List[Tuple]):
+    import community as community_louvain
+    partition = community_louvain.best_partition(Graph(edges))
+
+
+def leiden(edges: List[Tuple]):
+    import igraph as ig
+    import leidenalg
+    g = ig.Graph.TupleList(edges)
+    partition = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
+    return partition
+
+import numpy as np
+from numba import njit
+
+@njit
+def compute_homophily_numba(edges, labels):
+    """
+    edges: 2D numpy array (E, 2), int64
+    labels: 1D numpy array (N,), int64
+    return: float, homophily ratio
+    """
+    same = 0
+    E = edges.shape[0]
+    for i in range(E):
+        u = edges[i, 0]
+        v = edges[i, 1]
+        if labels[u] == labels[v]:
+            same += 1
+    return same / E if E > 0 else 0.0
+
+
+# # Example
+# edges = np.array([(0,1), (1,2), (2,3), (3,4), (4,0)], dtype=np.int64)
+# labels = np.array([0,0,1,1,0], dtype=np.int64)
+
+# print(compute_homophily_numba(edges, labels))  
+
+def compute_homophily(edges, labels):
+    """
+    edges: List[Tuple[int, int]]
+    labels: List[int]
+    return: float, homophily ratio
+    """
+    edges = np.asarray(edges, dtype=np.int64)
+    labels = np.asarray(labels, dtype=np.int64)
+
+    # 获取边两端节点的标签
+    u_labels = labels[edges[:, 0]]
+    v_labels = labels[edges[:, 1]]
+
+    # 判断是否同类
+    same = (u_labels == v_labels)
+
+    return same.sum() / len(edges) if len(edges) > 0 else 0.0
