@@ -1,6 +1,6 @@
 """Parameter Search:
 ```bash
-log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;task=ratings;method=r2n;use_cache=1;mkdir -p $log_dir;nohup python -u -m scripts.search --gpu=$gpu --model $model --task $task --method $method --use_cache $use_cache --dataset=$d --n_trials=10 --n_jobs=2 > $log_dir/$method-$model-$task-$id.log 2>&1 & echo $!
+log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;task=ratings;method=r2n;use_cache=1;mkdir -p $log_dir;nohup python -u -m scripts.search --gpu=$gpu --model $model --task $task --method $method --use_cache $use_cache --dataset=$d --n_trials=20 --n_jobs=2 > $log_dir/$method-$model-$task-$id.log 2>&1 & echo $!
 ```
 """
 
@@ -21,8 +21,9 @@ import torch
 from optuna.trial import TrialState
 import yaml
 import traceback
-from utils import logger
 from utils.rdb import name_id_mapping
+
+logger = optuna.logging.get_logger("optuna")
 
 
 class PaddedLevelFormatter(logging.Formatter):
@@ -49,7 +50,7 @@ search_space = {
     "batch_size": [2048, 4196, 8196],
     "hid_size": [64, 128, 256, 512],
     "feat_encode_size": [64, 128, 256, 512],
-    "fanouts": [(25, 20), (30, 25), (35, 30)],
+    "fanouts": [[25, 20], [30, 25], [35, 30]],
     "negative_sampling_ratio": [5, 10, 15],
     "patience": [5, 10, 15, 20],
     "epochs": [100, 150, 200],
@@ -332,7 +333,7 @@ if __name__ == "__main__":
     n_jobs: int = args.n_jobs
     MODEL: str = f"{method}_{model}_{d}_{task}"
 
-    LOCK_FILE_FLOCK = Path(f"logs/{d}/autom/{method}/{model}/{task}.lock")
+    LOCK_FILE_FLOCK = Path(f"logs/{d}/autom/{method}/{model}/{task}/lock")
     log_path = LOCK_FILE_FLOCK.parent
     log_path.mkdir(exist_ok=True, parents=True)
 
@@ -361,7 +362,7 @@ if __name__ == "__main__":
             use_cache=use_cache,
             log_path=log_path,
             path_cache=path_cache,
-            path_schema=path_schema
+            path_schema=path_schema,
         ),
         n_trials=n_trials,
         n_jobs=n_jobs,
@@ -415,7 +416,7 @@ if __name__ == "__main__":
                         log_path=log_path,
                         path_cache=path_cache,
                         path_schema=path_schema,
-                        prune_fail_pruned=False
+                        prune_fail_pruned=False,
                     ),
                     n_trials=trials_enqueued,
                     n_jobs=1,

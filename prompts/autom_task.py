@@ -36,10 +36,20 @@ task_description = {
 
 
 def get_task_description(
-    dataset: str, task_name: str, target_column: str, target_table: str
+    dataset: str,
+    task_name: str,
+    target_column: str,
+    target_table: str,
+    primary_column: str,
 ):
     try:
-        return f"{task_description[dataset][task_name].format(target_column=target_column, target_table=target_table)}. The starting and final columns should both be the column `{target_column}` of the table `{target_table}`"
+        td = f"{task_description[dataset][task_name].format(target_column=target_column, target_table=target_table)}."
+        memo = (
+            f"The starting and final columns should both be the primary_key column `{primary_column}` w.r.g. `{target_column}` of the table `{target_table}`."
+            if primary_column
+            else ""
+        )
+        return f"{td}{memo}"
     except KeyError:
         return ""
 

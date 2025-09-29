@@ -182,18 +182,20 @@ def main(
 
     target_table = ''
     target_column = ''
+    primary_column = ''
     for task in multi_tabular_data.tasks:
         if task.metadata.name == task_name:
             target_table = task.metadata.target_table
+            target_column = task.metadata.target_column
             for column in task.metadata.columns:
                 if column.dtype == 'primary_key':
-                    target_column = column.name
+                    primary_column = column.name
                     break
             break
     if not target_column or not target_table:
         raise ValueError('Getting target_table or target_column failed.')
     
-    task_description = get_task_description(dataset, task_name, target_column, target_table)
+    task_description = get_task_description(dataset, task_name, target_column, target_table, primary_column)
 
     # metainfo = {
     #     key: value 

@@ -176,7 +176,7 @@ def analyze_dataframes(dataframes, k=5, dbb = None):
             objective = df.columns
         elif isinstance(df, dict):
             objective = df.keys()
-        elif isinstance(df, duckdb.duckdb.DuckDBPyRelation):
+        elif isinstance(df, duckdb.DuckDBPyRelation):
             df = df.to_df()
             objective = df.columns
         for col_name in objective:

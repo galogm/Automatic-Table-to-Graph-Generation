@@ -72,7 +72,9 @@ This function supports constructing meta-relations in two modes:
 4. Provide your reasoning in natural language (`explanation`).
 5. Provide each meta-relation a corresponding sql (`sqls`). If there is any timestamp in the meta-relation path, keep the latest in the final table searched out by the sql. No row of a later timestamp can be joined by an early row.
 6. Keep all rows distinct, removing any duplicates. For edges that are invertible (i.e., both (A, B) and (B, A) exist), retain only one of them.
-7. Provide each table generated from the meta-relation a corresponding schema (`new_table`) in the format of given original schema as follows. Keep the names the same as those in the sql code.
+7. Provide each table generated from the meta-relation a corresponding schema (`new_table`) with no primary key in the format of given original schema as follows. **Keep the names of the schema the same as those defined in the sql code !!!**.
+8. Each meta-relationship should contain **at least two meta-paths** to make the relationship more discriminative and not build too many joins.
+9. Recheck the above requirements after generating the answer.
 ```
 {{
     "name": "Ratings",
@@ -94,10 +96,6 @@ This function supports constructing meta-relations in two modes:
         {{
             "name": "timestamp",
             "dtype": "datetime",
-        }},
-        {{
-            "name": "ratingID",
-            "dtype": "primary_key",
         }}
     ],
     "time_column": "timestamp"
