@@ -83,3 +83,4 @@ workspace/*
 multi-table-benchmark/*.sh
 data
 data.bak
+.env-b
