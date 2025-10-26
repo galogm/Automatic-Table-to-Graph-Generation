@@ -1,9 +1,12 @@
-rm -rf .env
-
 bash .ci/py.sh
 
 # create and activate the virtual environment
-python3 -m venv .env
+if [ ! -d '.env' ]; then
+    python3 -m venv .env && echo create venv
+else
+    echo env exists
+fi
+
 source .env/bin/activate
 
 # update pip

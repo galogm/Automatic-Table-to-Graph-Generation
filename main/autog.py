@@ -1,21 +1,28 @@
-import os
 import ast
-import typer
-import numpy as np
-from rich import traceback
-from models.autog.agent import AutoG_Agent
-from prompts.task import get_task_description
-from utils.misc import seed_everything
-from models.autog.agent import load_dbb_dataset_from_cfg_path_no_name
 import json
-from utils import logger
+import logging
+import os
+
+import numpy as np
+import typer
+from rich import traceback
+
+from garc.models.autog.agent import AutoG_Agent, load_dbb_dataset_from_cfg_path_no_name
+from garc.prompts.task import get_task_description
+from garc.utils.misc import seed_everything
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="[%(levelname)1.1s %(asctime)s %(name)s:%(lineno)d] %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+
+logger = logging.getLogger(__name__)
 
 
 def retrieve_input_schema(full_schema):
     input_schema = {
-        key: value
-        for key, value in full_schema.items()
-        if key in ["dataset_name", "tables"]
+        key: value for key, value in full_schema.items() if key in ["dataset_name", "tables"]
     }
     return input_schema
 
@@ -62,9 +69,7 @@ def generate_training_metainfo(data, meta_dict, this_task):
                     is_numerical = False
             else:
                 is_numerical = False
-            if_primary_key = (
-                is_numerical and np.unique(column_value).size == column_value.size
-            )
+            if_primary_key = is_numerical and np.unique(column_value).size == column_value.size
             if if_primary_key:
                 table_meta_dict["columns"].append(
                     {
@@ -110,9 +115,7 @@ def generate_training_metainfo(data, meta_dict, this_task):
             column_info = {
                 "name": column.name,
                 "dtype": (
-                    column.dtype
-                    if is_special
-                    else meta_dict[task.target_table][column.name][0]
+                    column.dtype if is_special else meta_dict[task.target_table][column.name][0]
                 ),
             }
             task_dict["columns"].append(column_info)
@@ -138,19 +141,11 @@ def capitalize_first_alpha_concise(text):
 
 
 def main(
-    dataset: str = typer.Argument(
-        "rel-amazon", help="The dataset name of the RDB dataset"
-    ),
-    schema_path: str = typer.Argument(
-        "output/data", help="Path to the data storage directory."
-    ),
+    dataset: str = typer.Argument("rel-amazon", help="The dataset name of the RDB dataset"),
+    schema_path: str = typer.Argument("output/data", help="Path to the data storage directory."),
     method: str = typer.Argument("autog-s", help="The method to run the model."),
-    data_type_file: str = typer.Argument(
-        "stypes.json", help="The file to store the data type."
-    ),
-    task_name: str = typer.Argument(
-        "user-churn", help="Name of the task to fit the solution."
-    ),
+    data_type_file: str = typer.Argument("stypes.json", help="The file to store the data type."),
+    task_name: str = typer.Argument("user-churn", help="Name of the task to fit the solution."),
     seed: int = typer.Option(0, help="The seed to use for the model."),
     lm_path: str = typer.Option(
         "deepjoin/output/deepjoin_webtable_training-all-mpnet-base-v2-2023-10-18_19-54-27"
@@ -191,20 +186,16 @@ def main(
         metainfo = read_txt_dict(metainfo_path)
     else:
         logger.info("=== type construction begins ===")
+        from models.llm.gconstruct import MODEL_NAME, client
         from prompts.identify import identify_prompt
-        from models.llm.gconstruct import client, MODEL_NAME
 
         query = [
             {
                 "role": "user",
-                "content": identify_prompt(
-                    multi_tabular_data.metadata.tables, information
-                ),
+                "content": identify_prompt(multi_tabular_data.metadata.tables, information),
             },
         ]
-        with open(
-            os.path.join(path_of_the_dataset, "query.json"), "w", encoding="utf-8"
-        ) as file:
+        with open(os.path.join(path_of_the_dataset, "query.json"), "w", encoding="utf-8") as file:
             json.dump(query[0], file, indent=2)
 
         response = client.chat.completions.create(
@@ -225,9 +216,7 @@ def main(
 
     metainfo = {key: value for key, value in metainfo.items()}
 
-    schema_input = generate_training_metainfo(
-        multi_tabular_data, metainfo, this_task=task_name
-    )
+    schema_input = generate_training_metainfo(multi_tabular_data, metainfo, this_task=task_name)
 
     # Initialize and run agent
     agent = AutoG_Agent(

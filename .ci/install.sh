@@ -19,7 +19,7 @@ source .env/bin/activate
 python3 -m pip install -U pip
 
 # # torch cuda
-python3 -m pip install "torch==1.13.1" torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+python3 -m pip install "torch==1.13.1" torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117  -c constraints.txt
 # python3 -m pip install torch_scatter torch-sparse -f https://data.pyg.org/whl/torch-1.13.1+cu117.html  --no-deps
 
 # # dgl cuda

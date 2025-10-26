@@ -14,14 +14,13 @@
 
 import numpy as np
 import pandas as pd
-
 from _collections_abc import Mapping
-
-from torch.utils.data import functional_datapipe
-
 from dgl.graphbolt.minibatch_transformer import MiniBatchTransformer
+from torch.utils.data import functional_datapipe
+from utils import get_logger
 
-from utils import logger
+logger = get_logger(__name__)
+
 
 def train_val_test_split_by_ratio(df, train_ratio, val_ratio):
     """
@@ -35,8 +34,8 @@ def train_val_test_split_by_ratio(df, train_ratio, val_ratio):
     n_train = int(n * train_ratio)
     n_val = int(n * val_ratio)
     train_df = df.iloc[:n_train]
-    val_df = df.iloc[n_train:n_train + n_val]
-    test_df = df.iloc[n_train + n_val:]
+    val_df = df.iloc[n_train : n_train + n_val]
+    test_df = df.iloc[n_train + n_val :]
     return train_df, val_df, test_df
 
 
@@ -64,14 +63,10 @@ def train_val_test_split_by_temporal(df, time_col, train_ratio, val_ratio):
     df = df.sort_values(time_col)
     time = pd.to_datetime(df[time_col])
     train_time_cutoff, val_time_cutoff = np.quantile(
-        np.unique(time),
-        [train_ratio, train_ratio + val_ratio]
+        np.unique(time), [train_ratio, train_ratio + val_ratio]
     )
     train_df = df[time <= train_time_cutoff]
-    val_df = df[
-        (time > train_time_cutoff) &
-        (time <= val_time_cutoff)
-    ]
+    val_df = df[(time > train_time_cutoff) & (time <= val_time_cutoff)]
     test_df = df[time > val_time_cutoff]
     assert train_df.shape[0] > 0
     assert val_df.shape[0] > 0
@@ -85,9 +80,9 @@ def train_val_test_split_by_split_column(df, split_col):
     training set, rows with value ``valid`` becomes validation set, and rows with
     value ``test`` becomes test set.
     """
-    train_df = df[df[split_col] == 'train']
-    val_df = df[df[split_col] == 'valid']
-    test_df = df[df[split_col] == 'test']
+    train_df = df[df[split_col] == "train"]
+    val_df = df[df[split_col] == "valid"]
+    test_df = df[df[split_col] == "test"]
     return train_df, val_df, test_df
 
 
@@ -127,15 +122,8 @@ def assign_train_val_test_time_cutoff(train_df, val_df, test_df, time_col, predi
     return train_df, val_df, test_df
 
 
-
-
 def generate_eval_negative_samples(
-    df,
-    all_pos_df,
-    id_col,
-    num_negatives,
-    label_col='label',
-    query_idx='query_idx'
+    df, all_pos_df, id_col, num_negatives, label_col="label", query_idx="query_idx"
 ):
     """
     Augments a dataframe by generating negative examples with column ``id_col``
@@ -154,16 +142,13 @@ def generate_eval_negative_samples(
     # (i.e. it is a false negative), remove it.
     # This is done by groupby(columns_except_label_col).max(), since it
     # is equivalent to removing the duplicate records with zero labels.
-    all_pos_df = all_pos_df.assign(**{label_col:1})  # add an all-one label column
+    all_pos_df = all_pos_df.assign(**{label_col: 1})  # add an all-one label column
     mixed_df = pd.concat([all_pos_df, neg_df])
     columns_except_label_col = list(df.columns[df.columns != label_col])
-    mixed_df = (
-        mixed_df.groupby(columns_except_label_col)[label_col]
-        .max().reset_index()
-    )
+    mixed_df = mixed_df.groupby(columns_except_label_col)[label_col].max().reset_index()
     neg_df = mixed_df[mixed_df[label_col] == 0]
 
-    df = df.assign(**{label_col:1})  # add an all-one label column
+    df = df.assign(**{label_col: 1})  # add an all-one label column
     augmented_df = pd.concat([df, neg_df])
 
     # Compute query index column.
@@ -175,8 +160,10 @@ def generate_eval_negative_samples(
 
 def save_partitioned_parquet(df, path, npartitions=None, partition_cols=None):
     import dask
-    dask.config.set(scheduler='processes')
+
+    dask.config.set(scheduler="processes")
     import dask.dataframe as dd
+
     df = dd.from_pandas(df, npartitions=npartitions or 1)
     df.to_parquet(path, partition_on=partition_cols)
 
@@ -188,6 +175,7 @@ def tail_temporal(df, time_col, n_samples):
     time = pd.to_datetime(df[time_col])
     trunc_timestamp = time.quantile(1 - n_samples / df.shape[0])
     return df[time > trunc_timestamp]
+
 
 def train_val_test_split_npz_file(npz_file, num_of_samples, train_ratio, val_ratio):
     """
@@ -201,9 +189,10 @@ def train_val_test_split_npz_file(npz_file, num_of_samples, train_ratio, val_rat
     n_train = int(n * train_ratio)
     n_val = int(n * val_ratio)
     train_data = {k: npz_file[k][:n_train] for k in npz_file.keys()}
-    val_data = {k: npz_file[k][n_train:n_train + n_val] for k in npz_file.keys()}
-    test_data = {k: npz_file[k][n_train + n_val:] for k in npz_file.keys()}
+    val_data = {k: npz_file[k][n_train : n_train + n_val] for k in npz_file.keys()}
+    test_data = {k: npz_file[k][n_train + n_val :] for k in npz_file.keys()}
     return train_data, val_data, test_data
+
 
 def train_val_test_split_npz_file_defined(npz_file, train_mask, val_mask, test_mask):
     train_data = {k: npz_file[k][train_mask] for k in npz_file.keys()}
@@ -211,13 +200,15 @@ def train_val_test_split_npz_file_defined(npz_file, train_mask, val_mask, test_m
     test_data = {k: npz_file[k][test_mask] for k in npz_file.keys()}
     return train_data, val_data, test_data
 
-def train_val_test_split_npz_file_by_temporal(npz_file, num_of_samples, train_ratio, val_ratio, temporal_col):
+
+def train_val_test_split_npz_file_by_temporal(
+    npz_file, num_of_samples, train_ratio, val_ratio, temporal_col
+):
     ## temporal_col is a numpy array
     temporal_col = sorted(temporal_col)
     time = pd.to_datetime(temporal_col)
     train_time_cutoff, val_time_cutoff = np.quantile(
-        np.unique(time),
-        [train_ratio, train_ratio + val_ratio]
+        np.unique(time), [train_ratio, train_ratio + val_ratio]
     )
     train_mask = time <= train_time_cutoff
     val_mask = (time > train_time_cutoff) & (time <= val_time_cutoff)
@@ -227,19 +218,16 @@ def train_val_test_split_npz_file_by_temporal(npz_file, num_of_samples, train_ra
     test_data = {k: npz_file[k][test_mask] for k in npz_file.keys()}
     return train_data, val_data, test_data
 
-@functional_datapipe('version')
+
+@functional_datapipe("version")
 class VersionCompatibility(MiniBatchTransformer):
-    def __init__(
-        self,
-        datapipe
-    ):
+    def __init__(self, datapipe):
         super().__init__(datapipe, self._transform)
-        
-    
+
     def _transform(self, minibatch):
         minibatch.indexes = minibatch.query_idx
         return minibatch
-    
+
 
 def dataset_stats(rdb_data):
     """
@@ -256,5 +244,3 @@ def dataset_stats(rdb_data):
     logger.info(f"Total tables: {total_tables}")
     logger.info(f"Total rows: {total_rows}")
     logger.info(f"Total columns: {total_cols}")
-        
-        

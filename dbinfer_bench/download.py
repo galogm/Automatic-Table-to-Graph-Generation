@@ -12,16 +12,20 @@
 # permissions and limitations under the License.
 
 
-from typing import Tuple, Dict, Optional, List
-from pathlib import Path
 import os
-import boto3
-from tqdm import tqdm
-import tarfile
 import shutil
-import yaml
+import tarfile
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import boto3
 import requests
-from utils import logger
+import yaml
+from tqdm import tqdm
+
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 __all__ = [
     "get_builtin_path_or_download",
@@ -29,78 +33,77 @@ __all__ = [
     "list_builtin",
 ]
 
-DEFAULT_DOWNLOAD_CONFIG_FILE = Path(__file__).parent / 'download_config.yaml'
+DEFAULT_DOWNLOAD_CONFIG_FILE = Path(__file__).parent / "download_config.yaml"
+
 
 def list_builtin() -> List[str]:
     """List downloadable built-in datasets."""
     cfg = _get_download_cfg()
-    return sorted(list(cfg['datasets'].keys()))
+    return sorted(list(cfg["datasets"].keys()))
+
 
 def download_or_get_path(dataset_name_or_path: str):
     cfg = _get_download_cfg()
-    if dataset_name_or_path in cfg['datasets']:
+    if dataset_name_or_path in cfg["datasets"]:
         return get_builtin_path_or_download(dataset_name_or_path)
     else:
         return dataset_name_or_path
 
+
 def get_builtin_path_or_download(
-    dataset_name : str,
-    version : Optional[str] = None,
+    dataset_name: str,
+    version: Optional[str] = None,
 ) -> str:
 
     cfg = _get_download_cfg()
 
-    assert dataset_name in cfg['datasets']
+    assert dataset_name in cfg["datasets"]
 
     # Use the PROJECT_HOME variable set by the conda environment as the default path.
-    default_path = Path(os.environ.get("DBB_PROJECT_HOME", ".")) / 'datasets'
+    default_path = Path(os.environ.get("DBB_PROJECT_HOME", ".")) / "datasets"
     data_home = Path(os.environ.get("DBB_DATASET_HOME", default_path))
     data_dir = data_home / dataset_name
 
     if version is None:
-        version = cfg['datasets'][dataset_name]['version']
-    version_file = data_dir / 'VERSION'
+        version = cfg["datasets"][dataset_name]["version"]
+    version_file = data_dir / "VERSION"
 
     download = True
     if os.path.exists(version_file):
-        with open(version_file, 'rt') as f:
+        with open(version_file, "rt") as f:
             local_ver = f.read().strip()
         if local_ver == version:
             download = False
         else:
-            logger.info(f"Request version is ({version}) but found local version ({local_ver}). Re-downloading...")
+            logger.info(
+                f"Request version is ({version}) but found local version ({local_ver}). Re-downloading..."
+            )
             shutil.rmtree(data_dir)
-
-    
 
     if download:
         if not data_dir.exists():
             data_dir.mkdir(parents=True, exist_ok=False)
 
-        source = cfg['source']
+        source = cfg["source"]
         if source.startswith("s3://"):
             _download_s3(cfg, dataset_name, version, data_home)
         else:
             _download_default(cfg, dataset_name, version, data_home)
 
-        with open(version_file, 'w') as f:
+        with open(version_file, "w") as f:
             f.write(version)
 
     return data_dir
 
-def _download_s3(
-    cfg: Dict,
-    dataset_name : str,
-    version: str,
-    data_home: Path
-):
-    source = cfg['source']
+
+def _download_s3(cfg: Dict, dataset_name: str, version: str, data_home: Path):
+    source = cfg["source"]
     parts = source[5:].split("/")
     bucket_name = parts[0]
     tarfilename = f"{version}-{dataset_name}.tar"
-    prefix = '/'.join(parts[1:] + [tarfilename])
+    prefix = "/".join(parts[1:] + [tarfilename])
 
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource("s3")
     bucket = s3.Bucket(bucket_name)
     objs = list(bucket.objects.filter(Prefix=prefix))
     if len(objs) == 0:
@@ -108,23 +111,21 @@ def _download_s3(
     for obj in objs:
         logger.info(f"Dowloading {obj.key} ...")
         download_path = data_home / tarfilename
-        with tqdm(total=obj.size, unit='B', unit_scale=True) as progress:
+        with tqdm(total=obj.size, unit="B", unit_scale=True) as progress:
+
             def progress_callback(bytes_transferred):
                 progress.update(bytes_transferred)
+
             bucket.download_file(obj.key, download_path, Callback=progress_callback)
 
     logger.info(f"Extracting {download_path} ...")
-    with tarfile.open(download_path, 'r:*') as tar:
+    with tarfile.open(download_path, "r:*") as tar:
         tar.extractall(path=data_home)
 
-def _download_default(
-    cfg: Dict,
-    dataset_name : str,
-    version: str,
-    data_home: Path
-):
+
+def _download_default(cfg: Dict, dataset_name: str, version: str, data_home: Path):
     tarfilename = f"{version}-{dataset_name}.tar"
-    url = cfg['source'] + "/" + tarfilename
+    url = cfg["source"] + "/" + tarfilename
 
     req = requests.get(url, stream=True, verify=True)
     if req.status_code != 200:
@@ -132,9 +133,7 @@ def _download_default(
     # Get the total file size.
     total_size = int(req.headers.get("content-length", 0))
     download_path = data_home / tarfilename
-    with tqdm(
-        total=total_size, unit="B", unit_scale=True
-    ) as bar:
+    with tqdm(total=total_size, unit="B", unit_scale=True) as bar:
         with open(download_path, "wb") as f:
             for chunk in req.iter_content(chunk_size=1024):
                 if chunk:  # filter out keep-alive new chunks
@@ -142,8 +141,9 @@ def _download_default(
                     bar.update(len(chunk))
 
     logger.info(f"Extracting {download_path} ...")
-    with tarfile.open(download_path, 'r:*') as tar:
+    with tarfile.open(download_path, "r:*") as tar:
         tar.extractall(path=data_home)
+
 
 def _get_download_cfg():
     cfg_file = os.environ.get("DBB_DOWNLOAD_CONFIG_FILE", DEFAULT_DOWNLOAD_CONFIG_FILE)

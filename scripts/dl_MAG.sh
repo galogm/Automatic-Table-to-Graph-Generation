@@ -13,4 +13,4 @@ mkdir -p "$dataset_path/mag/expert/cite" && \
 mkdir -p "$dataset_path/mag/old/year" && \
 mkdir -p "$dataset_path/mag/expert/year" && \
 python3 -u -m dbinfer.main download mag && \
-python3 -u -m main.preprocessing_dataset MAG $dataset_path"  && echo DONE > logs/dl_MAG.log  2>&1 & echo $!
+python3 -u -m main.preprocessing_dataset MAG $dataset_path && echo DONE " > logs/dl_MAG.log  2>&1 & echo $!
