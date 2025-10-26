@@ -148,13 +148,14 @@ class DBBRDBDataset:
                     col = Column(col_name, VARCHAR)
                 cols.append(col)
             alchemy_tbl = Table(tbl_name, metadata, *cols)
+        print(metadata)
         # Create missing tables.
         for tbl, col in referred_pks.items():
             if tbl not in pks:
-                alchemy_tbl = Table(tbl, metadata, Column(col, Uuid, primary_key=True))
+                alchemy_tbl = Table(tbl, metadata, Column(col, Uuid, primary_key=True), extend_existing=True)
             elif col != pks[tbl]:
                 raise ValueError(f"Detect two primary keys ({col} and {pks[tbl]}) for table '{tbl}'!")
-
+        print(metadata)
         return metadata
 
     def save(self, path : Path):

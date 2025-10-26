@@ -5,9 +5,12 @@
 
 # CUDA_VISIBLE_DEVICES=0,1,2 nohup python3 -u -m main.rdb MVLS ./data/movielens/autog/final ./data/movielens/autog/final r2n sage ratings -c configs/movielens/sage-r2ne.yaml > logs/movielens-ratings-final.log &
 
+# tsk=ratings
+# uc=1
+# log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;method=r2n;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.autom movielens data autog-s type.txt $tsk && python -u -m scripts.search --gpu=$gpu --model $model --task $tsk --method $method --use_cache $use_cache --dataset=$d --n_trials=20 --n_jobs=2" > logs/movielens-autom-$tsk-final.log &
 tsk=ratings
 uc=1
-log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;method=r2n;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.autom movielens data autog-s type.txt $tsk && python -u -m scripts.search --gpu=$gpu --model $model --task $tsk --method $method --use_cache $use_cache --dataset=$d --n_trials=20 --n_jobs=2" > logs/movielens-autom-$tsk-final.log &
+log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;method=r2n;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.autom movielens data autog-s type.txt $tsk " > logs/movielens-autom-$tsk-final.log &
 
 python3 -u -m main.rdb MVLS ./data/movielens/autom/$tsk/final ./data/movielens/autom/$tsk/final r2n sage $tsk -c configs/movielens/sage-r2ne.yaml --use-cache $uc
 log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;task=ratings;method=r2n;use_cache=1;mkdir -p $log_dir;nohup python -u -m scripts.search --gpu=$gpu --model $model --task $task --method $method --use_cache $use_cache --dataset=$d --n_trials=10 --n_jobs=2 > $log_dir/$method-$model-$task-$id.log 2>&1 & echo $!

@@ -1510,6 +1510,7 @@ def get_multi_round_action_selection_prompt_epoch(actions, example, history_acti
         4. Name new columns or tables **in a semantically informative way**.
         5. **Double-CHECK** that the parameters used are consistent with their original names or with the names introduced in the previous actions.
         6. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.
+        7. Primary key of the task table should not be deleted.
         
         <selection>
         [{{'explanation': <explanation for the selection>, 'action': <selected action>, 'parameters': <parameters for the action> }}]

@@ -253,10 +253,17 @@ def analyze_dataframes(dataframes, k=5, dbb = None):
 
     return output_string 
 
+# client = openai.OpenAI(
+#     base_url="http://10.130.128.31:8889/v1",
+#     api_key="EMPTY"
+# )
+# MODEL_NAME = "Qwen3-30B-A3B-Thinking-2507"
+
 client = openai.OpenAI(
-    base_url="http://10.130.128.31:8889/v1",
-    api_key="EMPTY"
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key="sk-e5268faefc944ad78a601da37fb8fa02",
 )
+MODEL_NAME = "qwen3-max"
 
 
 def dummy_llm_interaction(query_text: str, query_filepath: str = "results/query.txt", response_filepath: str = "results/response.txt") -> str:
@@ -290,7 +297,6 @@ def dummy_llm_interaction(query_text: str, query_filepath: str = "results/query.
         # logger.info("---")
 
         # Loop until the response file is found
-        MODEL_NAME = "Qwen3-30B-A3B-Thinking-2507"
         while not os.path.exists(response_filepath):
             response = client.chat.completions.create(
                 model=MODEL_NAME,
