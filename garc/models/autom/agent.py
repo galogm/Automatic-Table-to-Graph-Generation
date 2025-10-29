@@ -233,11 +233,16 @@ class AutoM_Agent:
         for move in selection:
             logger.info(f"Move: {move}")
             last_valid_dbb = deepcopy(this_round_dbb)
+
             explanation = move["explanation"]
-            methods = move["action"]
-            parameters = move["parameters"]
-            sqls = move["sqls"]
-            new_table_schema = move["new_table"]
+            try:
+                methods = move["action"]
+                parameters = move["parameters"]
+                sqls = move["sqls"]
+                new_table_schema = move["new_table"]
+            except Exception as e:
+                logger.error("Not Actionable. Skip.")
+                continue
             logger.info(f"new_table_schema: {new_table_schema}")
 
             parameters["dbb"] = this_round_dbb

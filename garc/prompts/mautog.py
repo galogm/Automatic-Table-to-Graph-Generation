@@ -1592,7 +1592,7 @@ def get_multi_round_action_selection_prompt(
         Now, you need to
         1. Actively think about whether any one of the four actions should be conducted for the given task; If not, you can select "None" and then halt the program.
         2. Output all actions you can think of from the above list to perform, and output your selection in the following format. Any action you choose should facilitate the performance of the given task with a RGCN model, and **explain its benefits in the explanation part**.
-        3. DO NOT generate new relationships that are possible but unhelpful.
+        3. DO NOT generate new relationships that are possible but unhelpful or not in the action list.
         4. Name new columns or tables **in a semantically informative way**.
         5. **Double-CHECK** that the parameters used are consistent with their original names or with the names introduced in the previous actions.
         6. It should be noted that for those actions with sequential relation like one new categorical column generated after expanding a multi-category column, you don't need to generate in one round.

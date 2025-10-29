@@ -17,12 +17,23 @@ log_dir=logs/movielens/autom/;id=0;d=MVLS;gpu=$id;model=sage;task=ratings;method
 
 
 
+# retailrocket
+tsk=cvr
+nohup bash -c "python3 -u -m main.autog retailrocket data autog-s type.txt $tsk && python3 -u -m main.autom retailrocket data autog-s type.txt $tsk " > logs/retailrocket-autom-$tsk-final.log 2>&1 & echo $!
+
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog retailrocket data autog-s type.txt $tsk && python3 -u -m main.rdb RR ./data/retailrocket/autog/$tsk/final/ ./data/retailrocket/autog/$tsk/final/ r2n sage $tsk -c configs/rr/oracle-cvr.yaml" > logs/retailrocket-$tsk-final-autog_eval.log 2>&1 &
+
+
 
 # diginetica
 
 tsk=purchase
 uc=1
-log_dir=logs/diginetica/autom/;id=1;d=DIG;gpu=$id;model=sage;method=r2ne;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog diginetica data autog-s type.txt $tsk && python3 -u -m main.autom diginetica data autog-s type.txt $tsk && python -u -m scripts.search --gpu=$gpu --model $model --task $tsk --method $method --use_cache $use_cache --dataset=$d --n_trials=20 --n_jobs=2" > logs/diginetica-autom-$tsk-final.log &
+log_dir=logs/diginetica/autom/;id=1;d=DIG;gpu=$id;model=sage;method=r2ne;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c " python3 -u -m main.autom diginetica data autog-s type.txt $tsk " > logs/diginetica-autom-$tsk-final.log &
+
+python3 -u -m main.autog diginetica data autog-s type.txt $tsk &&
+
+python -u -m scripts.search --gpu=$gpu --model $model --task $tsk --method $method --use_cache $use_cache --dataset=$d --n_trials=20 --n_jobs=2
 
 tsk=ctr
 uc=1
@@ -43,10 +54,6 @@ tsk=repeater
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog avs data autog-s type.txt $tsk && python3 -u -m main.rdb AVS ./data/avs/autog/$tsk/final ./data/avs/autog/$tsk/final/ r2n sage $tsk -c configs/avs/oracle-$tsk.yaml" > logs/avs-$tsk-final-autog_eval.log  2>&1 &
 
 
-# retailrocket
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog retailrocket data autog-s type.txt cvr && python3 -u -m main.rdb RR ./data/retailrocket/autog/cvr/final/ ./data/retailrocket/autog/cvr/final/ r2n sage cvr -c configs/rr/oracle-cvr.yaml" > logs/retailrocket-cvr-final-autog_eval.log 2>&1 &
-
-
 # ieeecis
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog ieeecis data autog-s type.txt fraud && python3 -u -m main.rdb IEEE ./data/ieeecis/autog/fraud/final/ ./data/ieeecis/autog/fraud/final/ r2n sage fraud -c configs/ieee-cis/sage.yaml" > logs/ieeecis-fraud-final.log  2>&1 &
 
@@ -56,9 +63,10 @@ tsk=venue
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2ne sage $tsk -c configs/mag/oracle-$tsk.yaml" > logs/mag-$tsk-final.log  2>&1 &
 tsk=cite
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2ne sage $tsk -c configs/mag/oracle-$tsk.yaml" > logs/mag-$tsk-final.log  2>&1 &
-tsk=year
-CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2n sage $tsk -c configs/mag/oracle-$tsk.yaml" > logs/mag-$tsk-final.log  2>&1 &
 
+tsk=year
+CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog mag data autog-s type.txt $tsk && python3 -u -m main.autom mag data autog-s type.txt $tsk" > logs/mag-$tsk-final.log  2>&1 &
+python3 -u -m main.rdb MAG ./data/mag/autog/$tsk/final ./data/mag/autog/$tsk/final/ r2n sage $tsk -c configs/mag/oracle-$tsk.yaml
 
 
 # stackexchange
@@ -73,10 +81,12 @@ CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog stackexchange
 
 # Outbrain
 tsk=ctr
+log_dir=logs/outbrain/autom/;id=1;d=OBS;gpu=$id;model=sage;method=r2n;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog outbrain data autog-s type.txt $tsk && python3 -u -m main.autom outbrain data autog-s type.txt $tsk " > logs/outbrain-autom-$tsk-final.log &
+log_dir=logs/outbrain/autom/;id=1;d=OBS;gpu=$id;model=sage;method=r2n;use_cache=1;mkdir -p $log_dir;CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autom outbrain data autog-s type.txt $tsk " > logs/outbrain-autom-$tsk-final.log &
+
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog outbrain data autog-s type.txt $tsk && python3 -u -m main.rdb OBS ./data/outbrain/autog/$tsk/final ./data/outbrain/autog/$tsk/final/ r2n sage $tsk -c configs/outbrain-small/oracle-$tsk.yaml" > logs/outbrain-$tsk-final.log &
 
 
 # movielens
 tsk=ratings
 CUDA_VISIBLE_DEVICES=0,1,2 nohup bash -c "python3 -u -m main.autog movielens data autog-s type.txt $tsk && python3 -u -m main.rdb MVLS ./data/movielens/autog/$tsk/final ./data/movielens/autog/$tsk/final r2n sage $tsk -c configs/movielens/sage-r2ne.yaml" > logs/movielens-$tsk-final.log &
-

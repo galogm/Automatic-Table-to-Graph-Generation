@@ -186,8 +186,8 @@ def main(
         metainfo = read_txt_dict(metainfo_path)
     else:
         logger.info("=== type construction begins ===")
-        from models.llm.gconstruct import MODEL_NAME, client
-        from prompts.identify import identify_prompt
+        from garc.models.llm.gconstruct import MODEL_NAME, client
+        from garc.prompts.identify import identify_prompt
 
         query = [
             {

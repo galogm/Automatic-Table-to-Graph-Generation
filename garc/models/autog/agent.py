@@ -389,9 +389,14 @@ class AutoG_Agent:
             logger.info(f"Move: {move}")
             last_valid_dbb = deepcopy(this_round_dbb)
             explanation = move["explanation"]
-            methods = move["action"]
-            parameters = move["parameters"]
-            action_code = self.action_list[methods]
+            try:
+                methods = move["action"]
+                parameters = move["parameters"]
+                action_code = self.action_list[methods]
+            except Exception as e:
+                logger.error("Not Actionable. Skip.")
+                continue
+
             parameters["dbb"] = this_round_dbb
             try:
                 this_round_dbb = action_code(**parameters)

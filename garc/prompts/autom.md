@@ -1,5 +1,4 @@
-def get_autom_action_selection_prompt(history_actions, input_schema, stats, task):
-    MULTI_ROUND = """You are an excellent expert **graph data scientist and engineer**. Your task is to discover as many **meta-relations** as possible for constructing **task-oriented graphs** based on the given input Relational Database schema and statistics.
+You are an excellent expert **graph data scientist and engineer**. Your task is to discover as many **meta-relations** as possible for constructing **task-oriented graphs** based on the given input Relational Database schema and statistics.
 
 The schema will be provided in a dictionary format as follows:
 
@@ -29,8 +28,9 @@ This function supports constructing meta-relations in two modes:
 
 1. **Relation chaining across columns**
 
-   * Defines a connection between rows across multiple tables by traversing attribute paths.
-   * For example:
+   - Defines a connection between rows across multiple tables by traversing attribute paths.
+
+   - For example:
 
      ```py
      generate_meta_relation_table(dbb,
@@ -42,32 +42,36 @@ This function supports constructing meta-relations in two modes:
 
      means:
 
-     * `table_1_target_cols_2` and `table_2_target_cols_2` are connected by PK_FK.
-     * From `table_1`, map elements in `table_1_cols_1` to related elements in `table_1_cols_2`.
-     * Use `table_1_cols_2` to locate corresponding values in `table_2_cols_1`.
-     * Retrieve the related values in `table_2_cols_2`.
-     * Continue this chaining process until reaching `table_n`.
+     - From `table_1`, map elements in `table_1_cols_1` to related elements in `table_1_cols_2`.
+     - Use `table_1_cols_2` to locate corresponding values in `table_2_cols_1`.
+     - Retrieve the related values in `table_2_cols_2`.
+     - Continue this chaining process until reaching `table_n`.
 
 2. **Head–tail consistency constraint**
+
 <!-- IMPORTANT start -->
-   * The head columns (`table_1_cols_1`) must be the **primary_key column in the target table of the task**, ensuring task-oriented meta-relations.
-   * The head column (`table_1_cols_1`) and the tail column (`table_n_cols_2`) must belong to the **same columns of the same table**, ensuring meta-relation closure.
-   * It is necessary to cross a reasonable number of hops to ensure that the number of relationships constructed in the end is not empty, too few or too many.
+
+- The head columns (`table_1_cols_1`) must be the **target columns in the target table of the task**, ensuring task-oriented meta-relations.
+- The head column (`table_1_cols_1`) and the tail column (`table_n_cols_2`) must belong to the **same columns of the same table**, ensuring meta-relation closure.
+
 <!-- IMPORTANT end -->
+
 **Parameters**
 
-* `dbb`: the database object
-* `table_1`: name of the first table
-* `table_1_cols_1`: head column of `table_1` (task-relevant)
-* `table_1_cols_2`: related column in `table_1`
-* `table_2`: name of the second table (can be the same or different)
-* `table_2_cols_1`: column in `table_2` that directly maps to `table_1_cols_2` (via shared FK–PK relation or semantic alignment)
-* `table_2_cols_2`: task-relevant column in `table_2`
-* … continue for `table_3` to `table_n`
-* `table_n_cols_2`: must equal `table_1_cols_1` to close the meta-relation
+- `dbb`: the database object
+- `table_1`: name of the first table
+- `table_1_cols_1`: head column of `table_1` (task-relevant)
+- `table_1_cols_2`: related column in `table_1`
+- `table_2`: name of the second table (can be the same or different)
+- `table_2_cols_1`: column in `table_2` that directly maps to `table_1_cols_2` (via shared FK–PK relation or semantic alignment)
+- `table_2_cols_2`: task-relevant column in `table_2`
+- … continue for `table_3` to `table_n`
+- `table_n_cols_2`: must equal `table_1_cols_1` to close the meta-relation
 
 ### Your Task
+
 <!-- IMPORTANT start -->
+
 1. Analyze the given `<dataset_stats>`, `<schema>`, and `<tasks>` blocks.
 2. Decide whether constructing a **meta-relation** is beneficial for the task.
 3. If yes, propose a **meta-relation** by specifying the function call to `generate_meta_relation_table`.
@@ -77,7 +81,9 @@ This function supports constructing meta-relations in two modes:
 7. Provide each table generated from the meta-relation a corresponding schema (`new_table`) with no primary key in the format of given original schema as follows. **Keep the names of the schema the same as those defined in the sql code !!!**.
 8. Each meta-relationship should contain **at least two meta-paths** to make the relationship more discriminative and not build too many joins.
 9. Recheck the above requirements after generating the answer.
+
 <!-- IMPORTANT end -->
+
 ```
 {{
     "name": "Ratings",
@@ -166,10 +172,3 @@ History Actions:
 </input>
 
 Return your output in the json format inside <selection></selection>.
-"""
-    return MULTI_ROUND.format(
-        history_actions=history_actions,
-        stats=stats,
-        task=task,
-        input_schema=input_schema,
-    )
